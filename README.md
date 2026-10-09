@@ -6,6 +6,31 @@ The implementation contract is [Hospital_GreenOps_Codex_Build_Plan.md](Hospital_
 
 [Complete project report — implemented modules, M0–M10, architecture, user scopes, workflows and verification](Project.md).
 
+## Quick start — two commands
+
+For this initialized workspace, run these from the project folder with the existing `.env` and seeded data. The wrapper uses Docker when available, or rootless Podman, and respects the configured local or Supabase/Azure services.
+
+**1. Start the backend** — API, worker, scheduler and their required infrastructure/migrations:
+
+```bash
+./scripts/compose.sh up -d api worker scheduler
+```
+
+**2. Start the frontend** — run after the backend command:
+
+```bash
+./scripts/compose.sh up -d web
+```
+
+Open **http://localhost:3000**. Backend docs: **http://localhost:8000/docs**. Both commands run in the background; repeat them to start stopped services. For first-time installation, use the setup instructions under [Start](#start).
+
+To inspect startup status or logs:
+
+```bash
+./scripts/compose.sh ps
+./scripts/compose.sh logs --tail=50 api worker scheduler web
+```
+
 ## How the system works
 
 ```mermaid
@@ -57,9 +82,9 @@ All operating data is synthetic. AI reads permission-scoped evidence; action wri
 
 ## Start
 
-This workspace is initialized and running at localhost:3000. Restart the existing installation with `./scripts/compose.sh up -d`; generated login credentials are in `.local/demo-credentials.json`. The commands below initialize a fresh installation.
+This workspace is initialized. Use the two commands above to start it; generated login credentials are in `.local/demo-credentials.json`. The commands below initialize a fresh installation.
 
-Requires Docker with Compose v2 (supporting `!reset`/`!override`), network access for the initial image/dependency build, approximately 12 GB free disk and 8 GB RAM. The initial MinIO build compiles its pinned official source release; browser dependencies are included in the web image.
+Requires podman with Compose v2 (supporting `!reset`/`!override`), network access for the initial image/dependency build, approximately 12 GB free disk and 8 GB RAM. The initial MinIO build compiles its pinned official source release; browser dependencies are included in the web image.
 
 ```bash
 cp .env.example .env
@@ -67,24 +92,24 @@ python3 scripts/init_env.py
 python3 scripts/prepare_starter.py --source-dir hospital_greenops_starter
 # Alternative supplied ZIP: --archive Hospital_GreenOps_Synthetic_ML_Starter.zip
 
-docker compose up --build -d
-docker compose exec api python -m app.cli seed-demo --starter /app/data/public/starter
-docker compose exec api python -m app.cli generate-world --config /app/data/public/extended-demo.yaml
+podman compose up --build -d
+podman compose exec api python -m app.cli seed-demo --starter /app/data/public/starter
+podman compose exec api python -m app.cli generate-world --config /app/data/public/extended-demo.yaml
 for world in base_v1 stress_v1 extended_v1; do
-  docker compose exec api python -m app.cli infer --world "$world"
+  podman compose exec api python -m app.cli infer --world "$world"
 done
-docker compose exec api python -m app.cli smoke-test
+podman compose exec api python -m app.cli smoke-test
 ```
 
 Open **http://localhost:3000**. API documentation: **http://localhost:8000/docs**. Readiness: **http://localhost:8000/api/v1/health/ready**. Ports bind to loopback. PostgreSQL, Redis and object storage remain on the private Compose network.
 
-If the Docker socket is unavailable and rootless Podman is installed, replace `docker compose` in these commands with `./scripts/compose.sh`. The wrapper starts a local Podman API socket and uses the same Compose configuration. It was checked on this workspace.
+If the podman socket is unavailable and rootless Podman is installed, replace `podman compose` in these commands with `./scripts/compose.sh`. The wrapper starts a local Podman API socket and uses the same Compose configuration. It was checked on this workspace.
 
 Retrieve generated credentials locally; they are deliberately excluded from version control:
 
 ```bash
 mkdir -p .local
-docker compose exec -T api cat /app/shared/demo-credentials.json > .local/demo-credentials.json
+podman compose exec -T api cat /app/shared/demo-credentials.json > .local/demo-credentials.json
 chmod 600 .local/demo-credentials.json
 ```
 
@@ -114,10 +139,10 @@ LLM_REASONING_EFFORT=none
 The supplied Azure endpoint with `gpt-6-luna` was actually verified for text, streamed chunks, function calling, matching tool results and multiple parallel read calls. Its Chat Completions function calling required `reasoning_effort=none`. The adapter does not send `temperature`; `max_tokens` is not sent in this configuration. Capabilities are configurable for other compatible providers and must be checked against the selected deployment.
 
 ```bash
-docker compose up -d --force-recreate api worker scheduler
-docker compose exec api python -m app.cli check-llm
-docker compose exec api python -m app.cli agent-evaluate
-docker compose exec api python -m app.cli agent-refresh-evaluate
+podman compose up -d --force-recreate api worker scheduler
+podman compose exec api python -m app.cli check-llm
+podman compose exec api python -m app.cli agent-evaluate
+podman compose exec api python -m app.cli agent-refresh-evaluate
 ```
 
 Without credentials, metrics, CRUD, simulations, rules and deterministic reports work. Chat records configuration/provider failures honestly. Monitoring is disabled by default; enable a versioned facility agent policy in Settings. Autonomous software task creation additionally requires the server flag and the policy's category, severity, owner and daily limits. No tool operates equipment.
@@ -125,10 +150,10 @@ Without credentials, metrics, CRUD, simulations, rules and deterministic reports
 ## Validate and demonstrate
 
 ```bash
-docker compose exec api pytest -q
-docker compose exec web npm run test:e2e
+podman compose exec api pytest -q
+podman compose exec web npm run test:e2e
 python3 scripts/check_boundary.py
-docker compose exec api python -m app.cli verify-checksums
+podman compose exec api python -m app.cli verify-checksums
 # Host Python dependencies, if running the HTTP demo outside the containers:
 cd services/api && uv sync --frozen && cd ../..
 services/api/.venv/bin/python scripts/demo.py --url http://localhost:3000 --credentials .local/demo-credentials.json --llm

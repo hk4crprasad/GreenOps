@@ -1,0 +1,39 @@
+By the Grand Finale, we commit to demonstrating a working GreenOps AI estate intelligence platform with these capabilities, most important first:
+
+1. An adaptable estate dashboard: A configurable dashboard for colleges, company campuses, public-sector units, industrial estates, municipal facilities and mixed-use institutional zones. Administrators can configure buildings, zones, assets and operating thresholds to suit their estate, with role-based views for operations teams and sustainability officers.
+
+2. Priority Notification System: Autonomous AI detection agents continuously monitor incoming water-use, energy and equipment data for signs of leaks, abnormal consumption and critical operating risks. High-priority dashboard alerts are promptly routed to the relevant workers, with supporting evidence, location, severity and recommended next steps. Acknowledgement, escalation and resolution tracking support rapid response and help limit potential damage.
+
+3. Live data visualization and predictive insights: Ingest open, clearly identified synthetic or sensor-style data to visualize energy, water, waste, air quality, traffic, parking, asset utilization and safety trends. Short-term forecasts and anomaly detection will display their assumptions, data coverage and model limitations.
+
+4. An evidence-backed AI assistant: Administrators and workers can ask plain-language questions, investigate risks and receive actionable recommendations linked to authorized estate data. Each user's access remains restricted by role, estate and zone permissions.
+
+5. What-if scenario simulations: Test power outages, water-supply interruptions, equipment failures, heat, rainfall and demand surges. Compare response options such as maintenance priorities, collection timing and operating schedules, showing modeled impacts rather than claiming realized savings.
+
+6. Complete operational action workflows: Convert recommendations and alerts into reviewed tasks, assign eligible workers, track progress and require evidence for resolution and independent verification. Operational records, task history and approvals will persist in the database.
+
+7. Sustainability reports and scorecards: Generate downloadable reports covering resource consumption, waste, operational risks and estimated cost and emissions, with declared factors and coverage. Provide an audit trail from the original observation through the alert, recommendation and completed follow-up.
+
+The demonstration will show an end-to-end workflow: configure an estate → ingest data → detect a risk → notify the responsible worker → investigate and simulate → assign and verify action → export the evidence.
+
+3. Tech stack and hardware we plan to use
+
+Languages and interface: TypeScript, JavaScript, Python and SQL. Next.js/React will power the configurable dashboard, with Tailwind CSS and Apache ECharts for responsive views and visualizations.
+
+Backend and infrastructure: FastAPI, Pydantic and SQLAlchemy; PostgreSQL/Supabase with Alembic migrations and row-level security; Celery and Redis for monitoring and background jobs; private Azure Blob Storage for reports and evidence, with MinIO as a local alternative. Docker Compose provides reproducible startup.
+
+AI and analytics: pandas, NumPy and scikit-learn, including HistGradientBoostingRegressor for short-term resource forecasts and IsolationForest for anomaly detection, supplemented by deterministic risk rules. An Azure-hosted OpenAI-compatible model powers grounded explanations and scoped agent tools. What-if simulations use a deterministic Python engine. Forecasts remain experimental and their limitations will be visible.
+
+Proposed hardware: An ESP32-based Wi-Fi sensor node, water-flow and tank-level sensors for leak/reserve monitoring, energy-meter input, temperature/humidity and particulate sensors for environmental monitoring, and distance sensors for waste-bin fill or parking occupancy demonstrations. A laptop will run the dashboard and services; synthetic sensor feeds remain available for repeatable demonstrations.
+
+Still needed: Access to the ESP32 boards, selected sensor modules, power supplies, connectors and a controlled test setup. Physical sensor integration and calibration have not yet been validated. These hardware demonstrations are planned additions to the already implemented software platform.
+
+5. What have you built or tested so far?
+
+We have built and verified a working synthetic-data software prototype with 18 dashboard pages covering resources, assets, environment, parking, safety, simulations, actions, reports and AI chat. It includes real database-backed CRUD, seven role-based accounts, scoped access controls, PostgreSQL/Supabase, private Azure Blob Storage and background jobs.
+
+We have integrated six experimental energy/water forecast models, anomaly detection and deterministic risk rules. The what-if engine supports 13 interventions over 1–72-hour horizons. Grounded AI chat and investigation agents have been tested against a real Azure-hosted OpenAI-compatible provider, including streaming and parallel read-tool calls. Reviewed action workflows and actual CSV, HTML and PDF downloads have also been demonstrated.
+
+Recorded verification includes 41 passing backend tests, seven distinct browser workflows passing across recorded runs, and 20/20 page views passing. The database contains 51,840 synthetic source rows and 362,880 normalized observations. Backup/restore and recovery after a Redis outage were tested.
+
+Forecasts remain experimental and simulation impacts are modeled. Broader estate-specific dashboard adaptation, physical sensor integration and priority worker notification routing are the next planned additions.

@@ -1,0 +1,10 @@
+GreenOps AI — estate intelligence concept
+
+Upload image: greenops-estate-idea.png
+Editable Eraser: https://app.eraser.io/workspace/OwOtHEXwKkr1FdVFNCQt?diagram=cc6dkZVkQxpomGPcpkGm&layout=canvas
+Offline editable source: greenops-estate-idea.eraserdiagram
+
+Shows estate data, secure platform, AI analysis, priority worker alerts, task review, dashboard and reports.
+Dashed boundaries identify planned physical sensors, notification routing and estate dashboard adaptation.
+Solid boundaries identify software prototype services. Forecasts remain experimental; inputs are synthetic.
+Created with Eraser; exported PNG visually inspected. File stays team-scoped, without public link access.

@@ -1,0 +1,766 @@
+freeform-diagram
+
+{
+  "title": "GreenOps AI Estate Intelligence Architecture",
+  "diagramX": 0,
+  "diagramY": 0,
+  "elements": [
+    {
+      "tag": "Relationship",
+      "from": "task",
+      "to": "rep",
+      "color": "#3E6A8A",
+      "fromPort": "right",
+      "toPort": "left",
+      "endArrowhead": "triangle",
+      "id": "r7",
+      "x": 1405,
+      "y": 447,
+      "width": 110,
+      "height": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          110,
+          0
+        ]
+      ],
+      "lineStyle": "solid",
+      "lineWidth": 0.75
+    },
+    {
+      "color": "#3E6A8A",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "Celery / Redis",
+          "fontSize": 18
+        },
+        {
+          "text": "background jobs",
+          "fontSize": 14
+        }
+      ],
+      "icon": "timer",
+      "id": "jobs",
+      "x": 405,
+      "y": 476,
+      "width": 260,
+      "height": 76,
+      "containerId": "g2"
+    },
+    {
+      "color": "#3E6A8A",
+      "bgColor": "#F2F6FA",
+      "styleMode": "plain",
+      "tag": "Group",
+      "title": {
+        "text": "5 · DASHBOARD & REPORTS",
+        "fontSize": 16,
+        "icon": "layout-dashboard"
+      },
+      "id": "g5",
+      "x": 1495,
+      "y": 175,
+      "width": 304,
+      "height": 410
+    },
+    {
+      "tag": "Relationship",
+      "from": "dash",
+      "to": "api",
+      "label": "HTTPS / SSE",
+      "color": "#3E6A8A",
+      "fromPort": "top",
+      "toPort": "top",
+      "startArrowhead": "triangle",
+      "endArrowhead": "triangle",
+      "labelPlacement": {
+        "x": -777.5,
+        "y": -32,
+        "width": 75,
+        "height": 16
+      },
+      "id": "r9",
+      "x": 1645,
+      "y": 235,
+      "width": 1110,
+      "height": 24,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          -24
+        ],
+        [
+          -1110,
+          -24
+        ],
+        [
+          -1110,
+          0
+        ]
+      ],
+      "lineStyle": "solid",
+      "lineWidth": 0.75
+    },
+    {
+      "color": "#1F5E3B",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "Open / synthetic data",
+          "fontSize": 18
+        },
+        {
+          "text": "implemented prototype",
+          "color": "#666666",
+          "fontSize": 14
+        }
+      ],
+      "icon": "file-spreadsheet",
+      "id": "open",
+      "x": 35,
+      "y": 235,
+      "width": 260,
+      "height": 76,
+      "containerId": "g1"
+    },
+    {
+      "tag": "Relationship",
+      "from": "api",
+      "to": "jobs",
+      "color": "#3E6A8A",
+      "fromPort": "left",
+      "toPort": "left",
+      "endArrowhead": "triangle",
+      "id": "r2b",
+      "x": 405,
+      "y": 292,
+      "width": 44,
+      "height": 222,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -44,
+          0
+        ],
+        [
+          -44,
+          222
+        ],
+        [
+          0,
+          222
+        ]
+      ],
+      "lineStyle": "solid",
+      "lineWidth": 0.75
+    },
+    {
+      "color": "#1F5E3B",
+      "bgColor": "#F3F8F4",
+      "styleMode": "plain",
+      "tag": "Group",
+      "title": {
+        "text": "3 · AI & ANALYSIS",
+        "fontSize": 16,
+        "icon": "brain"
+      },
+      "id": "g3",
+      "x": 755,
+      "y": 175,
+      "width": 300,
+      "height": 410
+    },
+    {
+      "color": "#1F5E3B",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "borderStyle": "dashed",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "ESP32 sensors",
+          "fontSize": 18
+        },
+        {
+          "text": "water · energy · air · waste · parking",
+          "fontSize": 14
+        }
+      ],
+      "icon": "cpu",
+      "badge": {
+        "text": "planned",
+        "color": "#8A5A12",
+        "bgColor": "#FDE7C2",
+        "fontSize": 12,
+        "shape": "rectangle",
+        "placement": "top-right"
+      },
+      "id": "esp",
+      "x": 35,
+      "y": 347,
+      "width": 260,
+      "height": 99,
+      "containerId": "g1"
+    },
+    {
+      "color": "#B7791F",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "Task workflow",
+          "fontSize": 18
+        },
+        {
+          "text": "Assign / acknowledge / resolve",
+          "fontSize": 14
+        },
+        {
+          "text": "independent reviewer verifies",
+          "fontSize": 14
+        }
+      ],
+      "icon": "clipboard-check",
+      "id": "task",
+      "x": 1145,
+      "y": 387,
+      "width": 260,
+      "height": 116,
+      "containerId": "g4"
+    },
+    {
+      "tag": "Relationship",
+      "from": "pns",
+      "to": "task",
+      "color": "#B7791F",
+      "fromPort": "bottom",
+      "toPort": "top",
+      "endArrowhead": "triangle",
+      "id": "r5",
+      "x": 1275,
+      "y": 351,
+      "width": 0,
+      "height": 36,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          36
+        ]
+      ],
+      "lineStyle": "solid",
+      "lineWidth": 0.75
+    },
+    {
+      "color": "#1F5E3B",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "Grounded AI assistant",
+          "fontSize": 18
+        },
+        {
+          "text": "Azure OpenAI-compatible adapter",
+          "fontSize": 14
+        }
+      ],
+      "icon": "sparkles",
+      "id": "ai",
+      "x": 775,
+      "y": 361,
+      "width": 260,
+      "height": 96,
+      "containerId": "g3"
+    },
+    {
+      "tag": "Relationship",
+      "from": "g1",
+      "to": "api",
+      "color": "#1F5E3B",
+      "fromPort": "right",
+      "toPort": "left",
+      "endArrowhead": "triangle",
+      "id": "r1",
+      "x": 315,
+      "y": 254,
+      "width": 90,
+      "height": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          90,
+          0
+        ]
+      ],
+      "lineStyle": "solid",
+      "lineWidth": 0.75
+    },
+    {
+      "tag": "Textbox",
+      "text": "Estate intelligence: observe, anticipate, respond.",
+      "color": "#3E6A8A",
+      "fontSize": 20,
+      "id": "subtitle",
+      "x": 15,
+      "y": 67,
+      "width": 399.625,
+      "height": 20.40625
+    },
+    {
+      "color": "#3E6A8A",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "tag": "Shape",
+      "shape": "cylinder",
+      "texts": [
+        {
+          "text": "PostgreSQL / Supabase",
+          "fontSize": 18
+        },
+        {
+          "text": "row-level security",
+          "fontSize": 14
+        }
+      ],
+      "id": "db",
+      "x": 405,
+      "y": 347,
+      "width": 260,
+      "height": 100.21016403225602,
+      "containerId": "g2"
+    },
+    {
+      "color": "#1F5E3B",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "Solid = prototype",
+          "fontSize": 14
+        }
+      ],
+      "id": "leg",
+      "x": 15,
+      "y": 645,
+      "width": 200,
+      "height": 40
+    },
+    {
+      "tag": "Relationship",
+      "from": "api",
+      "to": "db",
+      "color": "#3E6A8A",
+      "fromPort": "bottom",
+      "toPort": "top",
+      "endArrowhead": "triangle",
+      "id": "r2",
+      "x": 535,
+      "y": 311,
+      "width": 0,
+      "height": 36,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          36
+        ]
+      ],
+      "lineStyle": "solid",
+      "lineWidth": 0.75
+    },
+    {
+      "color": "#B7791F",
+      "bgColor": "#FFF8EC",
+      "styleMode": "plain",
+      "tag": "Group",
+      "title": {
+        "text": "4 · PRIORITY ALERTS",
+        "fontSize": 16,
+        "icon": "bell"
+      },
+      "id": "g4",
+      "x": 1125,
+      "y": 175,
+      "width": 300,
+      "height": 410
+    },
+    {
+      "tag": "Relationship",
+      "from": "g2",
+      "to": "g3",
+      "color": "#3E6A8A",
+      "fromPort": "right",
+      "toPort": "left",
+      "endArrowhead": "triangle",
+      "id": "r3",
+      "x": 685,
+      "y": 410,
+      "width": 70,
+      "height": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          70,
+          0
+        ]
+      ],
+      "lineStyle": "solid",
+      "lineWidth": 0.75
+    },
+    {
+      "color": "#B7791F",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "borderStyle": "dashed",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "Dashed = planned",
+          "fontSize": 14
+        }
+      ],
+      "id": "leg2",
+      "x": 235,
+      "y": 645,
+      "width": 200,
+      "height": 40
+    },
+    {
+      "color": "#1F5E3B",
+      "bgColor": "#F3F8F4",
+      "styleMode": "plain",
+      "tag": "Group",
+      "title": {
+        "text": "1 · DATA",
+        "fontSize": 16,
+        "icon": "activity"
+      },
+      "id": "g1",
+      "x": 15,
+      "y": 175,
+      "width": 300,
+      "height": 410
+    },
+    {
+      "color": "#3E6A8A",
+      "bgColor": "#F2F6FA",
+      "styleMode": "plain",
+      "tag": "Group",
+      "title": {
+        "text": "2 · SECURE PLATFORM",
+        "fontSize": 16,
+        "icon": "shield-check"
+      },
+      "id": "g2",
+      "x": 385,
+      "y": 175,
+      "width": 300,
+      "height": 410
+    },
+    {
+      "tag": "Textbox",
+      "text": "Colleges • campuses • industrial estates • municipal facilities • public-sector units",
+      "color": "#555555",
+      "fontSize": 16,
+      "id": "scope",
+      "x": 15,
+      "y": 101,
+      "width": 542.390625,
+      "height": 16.921875
+    },
+    {
+      "color": "#3E6A8A",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "FastAPI / Python",
+          "fontSize": 18
+        },
+        {
+          "text": "ingestion + authorization",
+          "fontSize": 14
+        }
+      ],
+      "icon": "server",
+      "id": "api",
+      "x": 405,
+      "y": 235,
+      "width": 260,
+      "height": 76,
+      "containerId": "g2"
+    },
+    {
+      "color": "#3E6A8A",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "borderStyle": "dashed",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "Estate dashboard",
+          "fontSize": 18
+        },
+        {
+          "text": "Next.js / TypeScript · configurable",
+          "fontSize": 14
+        },
+        {
+          "text": "admins · operations · sustainability officers",
+          "fontSize": 14
+        }
+      ],
+      "icon": "monitor",
+      "badge": {
+        "text": "planned",
+        "color": "#8A5A12",
+        "bgColor": "#FDE7C2",
+        "fontSize": 12,
+        "shape": "rectangle",
+        "placement": "top-right"
+      },
+      "id": "dash",
+      "x": 1515,
+      "y": 235,
+      "width": 260,
+      "height": 136,
+      "containerId": "g5"
+    },
+    {
+      "tag": "Textbox",
+      "text": "GreenOps AI",
+      "color": "#1F5E3B",
+      "fontSize": 36,
+      "id": "title",
+      "x": 15,
+      "y": 15,
+      "width": 186.734375,
+      "height": 34.3125
+    },
+    {
+      "tag": "Textbox",
+      "text": "Concept architecture · synthetic-data prototype · physical sensors and notification routing planned · forecasts experimental · no physical equipment control",
+      "color": "#555555",
+      "fontSize": 15,
+      "hAlign": "right",
+      "id": "note",
+      "x": 1015,
+      "y": 643,
+      "width": 791.015625,
+      "height": 29.09375
+    },
+    {
+      "color": "#1F5E3B",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "Forecasts + risk detection",
+          "fontSize": 18
+        },
+        {
+          "text": "scikit-learn · experimental",
+          "fontSize": 14
+        }
+      ],
+      "icon": "trending-up",
+      "id": "fc",
+      "x": 775,
+      "y": 235,
+      "width": 260,
+      "height": 96,
+      "containerId": "g3"
+    },
+    {
+      "color": "#B7791F",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "borderStyle": "dashed",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "Priority Notification System",
+          "fontSize": 18
+        },
+        {
+          "text": "evidence-backed alerts to relevant workers",
+          "fontSize": 14
+        }
+      ],
+      "icon": "bell-ring",
+      "badge": {
+        "text": "planned",
+        "color": "#8A5A12",
+        "bgColor": "#FDE7C2",
+        "fontSize": 12,
+        "shape": "rectangle",
+        "placement": "top-right"
+      },
+      "id": "pns",
+      "x": 1145,
+      "y": 235,
+      "width": 260,
+      "height": 116,
+      "containerId": "g4"
+    },
+    {
+      "color": "#1F5E3B",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "What-if scenarios",
+          "fontSize": 18
+        },
+        {
+          "text": "deterministic",
+          "fontSize": 14
+        }
+      ],
+      "icon": "sliders-horizontal",
+      "id": "wi",
+      "x": 775,
+      "y": 487,
+      "width": 260,
+      "height": 76,
+      "containerId": "g3"
+    },
+    {
+      "tag": "Relationship",
+      "from": "task",
+      "to": "jobs",
+      "label": "approved task & evidence feedback",
+      "color": "#1F5E3B",
+      "fromPort": "bottom",
+      "toPort": "bottom",
+      "endArrowhead": "triangle",
+      "labelPlacement": {
+        "x": -473,
+        "y": 98,
+        "width": 206,
+        "height": 16
+      },
+      "id": "r8",
+      "x": 1275,
+      "y": 503,
+      "width": 740,
+      "height": 106,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          106
+        ],
+        [
+          -740,
+          106
+        ],
+        [
+          -740,
+          49
+        ]
+      ],
+      "lineStyle": "solid",
+      "lineWidth": 0.75
+    },
+    {
+      "tag": "Relationship",
+      "from": "g3",
+      "to": "pns",
+      "color": "#B7791F",
+      "fromPort": "right",
+      "toPort": "left",
+      "endArrowhead": "triangle",
+      "id": "r4",
+      "x": 1055,
+      "y": 380,
+      "width": 90,
+      "height": 87,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          46,
+          0
+        ],
+        [
+          46,
+          -87
+        ],
+        [
+          90,
+          -87
+        ]
+      ],
+      "lineStyle": "solid",
+      "lineWidth": 0.75
+    },
+    {
+      "color": "#3E6A8A",
+      "bgColor": "#FFFFFF",
+      "styleMode": "plain",
+      "tag": "Shape",
+      "texts": [
+        {
+          "text": "Sustainability reports",
+          "fontSize": 18
+        },
+        {
+          "text": "audit evidence in private",
+          "fontSize": 14
+        },
+        {
+          "text": "Azure Blob Storage",
+          "fontSize": 14
+        }
+      ],
+      "icon": "file-check",
+      "id": "rep",
+      "x": 1515,
+      "y": 401,
+      "width": 260,
+      "height": 96,
+      "containerId": "g5"
+    }
+  ]
+}
