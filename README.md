@@ -4,6 +4,8 @@ A working, local operations and sustainability application for a fictional hospi
 
 The implementation contract is [Hospital_GreenOps_Codex_Build_Plan.md](Hospital_GreenOps_Codex_Build_Plan.md). Verification and limitations are recorded in [docs/build-status.md](docs/build-status.md).
 
+[Complete project report — implemented modules, M0–M10, architecture, user scopes, workflows and verification](Project.md).
+
 ## How the system works
 
 ```mermaid
