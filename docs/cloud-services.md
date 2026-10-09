@@ -40,7 +40,7 @@ MinIO and local PostgreSQL are omitted by the overlays. Redis remains local for 
 
 ## Demo sign-in
 
-In `APP_MODE=demo`, the entrance shows seven one-click role buttons. Each authenticates against the actual Argon2 password hash and creates the regular session/CSRF cookies. Credentials remain in the server's demo credential file; passwords are never returned by the account-list endpoint or shipped in the frontend bundle. Manual email/password sign-in still works. Sign out to switch perspectives.
+In `APP_MODE=demo`, the entrance shows seven real accounts with their email/password, direct sign-in and a Fill credentials option. Direct sign-in verifies the actual Argon2 password hash and creates regular session/CSRF cookies. The frontend explicitly requests credential display from the demo-only API; the default account list excludes passwords, responses are not cached, and no passwords are hardcoded in the frontend bundle. Sign out to switch perspectives. If the shared credential file is missing or incomplete but users already exist, bootstrap regenerates only missing demo passwords and preserves users, grants and all operating records.
 
 In `APP_MODE=production`, the account list is empty and the demo login endpoint returns HTTP 403. The maintenance technician retains Ward A-only grants; auditors retain their restricted writes. These are demo accounts, so demo mode should only be enabled for the synthetic demonstration.
 

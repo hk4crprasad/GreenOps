@@ -2993,7 +2993,9 @@ export interface operations {
     };
     demo_accounts_api_v1_auth_demo_accounts_get: {
         parameters: {
-            query?: never;
+            query?: {
+                include_credentials?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3007,6 +3009,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

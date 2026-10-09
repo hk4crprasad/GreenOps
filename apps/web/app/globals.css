@@ -17,6 +17,14 @@
 .demo-role:first-child{border-color:#94b9a2;background:#edf5ef}
 .demo-role strong{display:block;font-size:13px;color:#173d2c}
 .demo-role small{display:block;font-size:11px;color:var(--muted);margin:4px 0}
+.demo-role-details{min-width:0;flex:1}
+.demo-credential{margin-top:6px;display:grid;grid-template-columns:58px minmax(0,1fr);gap:6px;align-items:baseline;font-size:10px}
+.demo-credential>span{color:var(--muted)}
+.demo-credential code{font-family:Consolas,monospace;font-size:11px;overflow-wrap:anywhere;user-select:all}
+.demo-role-actions{display:flex;flex-direction:column;gap:7px;flex-shrink:0}
+.demo-role-actions button{font-size:11px;white-space:nowrap;padding:8px 10px}
+.demo-role-actions .demo-enter{display:flex;align-items:center;justify-content:center;gap:7px;color:white}
+.demo-password{color:var(--ink)}
 .demo-email{font-size:10px;color:#587365;overflow-wrap:anywhere}
 .demo-enter{color:var(--green);flex-shrink:0;font-size:11px}
 .demo-role:hover:not(:disabled){border-color:#4c8865;background:#e8f2eb}
@@ -25,4 +33,4 @@
 .manual-login-title{font-size:11px;color:var(--muted);padding-top:18px;border-top:1px solid var(--line)}
 .login-credentials-note{margin:16px 0 0;line-height:1.6}
 @media(min-width:751px){.login-art{position:sticky;top:0;height:100dvh;padding:clamp(30px,5vw,80px)}.login-art h1{font-size:clamp(34px,4vw,58px)}.login-form{padding:36px clamp(24px,4vw,60px)}}
-@media(max-width:750px){.demo-role{padding:12px}.login-workspace h2{font-size:24px}.login-bottom{margin-top:18px}.login-form{padding:28px 20px}}
+@media(max-width:750px){.demo-role{padding:12px;flex-wrap:wrap}.demo-role-details{flex-basis:100%}.demo-role-actions{flex-direction:row;width:100%}.demo-role-actions button{flex:1}.login-workspace h2{font-size:24px}.login-bottom{margin-top:18px}.login-form{padding:28px 20px}}

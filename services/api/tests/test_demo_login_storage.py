@@ -35,7 +35,54 @@ def test_production_disables_demo_selection_and_login(monkeypatch):
     monkeypatch.setattr(settings(), 'app_mode', 'production')
     with TestClient(app) as client:
         assert client.get('/api/v1/auth/demo-accounts').json() == {'enabled': False, 'items': []}
+        assert client.get('/api/v1/auth/demo-accounts?include_credentials=true').json() == {'enabled': False, 'items': []}
         assert client.post('/api/v1/auth/demo-login', json={'role': 'hospital_admin'}).status_code == 403
+
+
+def test_demo_credentials_are_available_only_on_explicit_request():
+    with TestClient(app) as client:
+        response = client.get('/api/v1/auth/demo-accounts?include_credentials=true')
+        assert response.status_code == 200
+        assert response.headers['cache-control'] == 'no-store'
+        saved = json.loads(Path(settings().demo_credentials_path).read_text())
+        rows = response.json()['items']
+        assert len(rows) == 7
+        for row in rows:
+            assert row['email'] == saved[row['role']]['email']
+            assert row['password'] == saved[row['role']]['password']
+        assert all('password' not in row for row in client.get('/api/v1/auth/demo-accounts').json()['items'])
+
+
+def test_demo_bootstrap_recovers_missing_credentials_without_recreating_users(tmp_path, monkeypatch):
+    from argon2 import PasswordHasher
+    from app import bootstrap
+    from app.core.models import User
+    users = {bootstrap.uid(role+'@demo.greenops.local'): User(
+        id=bootstrap.uid(role+'@demo.greenops.local'), email=role+'@demo.greenops.local',
+        name=role, password_hash='original', service_principal=role=='monitor_service')
+        for role in bootstrap.ROLES + ['monitor_service']}
+    db = MagicMock()
+    db.get.side_effect = lambda cls, key: users[key] if cls is User else object()
+    session = MagicMock()
+    session.__enter__.return_value = db
+    monkeypatch.setattr(bootstrap, 'Session', MagicMock(return_value=session))
+    monkeypatch.setattr(bootstrap, 'database_engine', MagicMock())
+    dest = tmp_path/'demo-credentials.json'
+    monkeypatch.setenv('APP_MODE', 'demo')
+    monkeypatch.setenv('MIGRATION_DATABASE_URL', 'test-only')
+    monkeypatch.setenv('DEMO_CREDENTIALS_PATH', str(dest))
+    monkeypatch.setattr('sys.argv', ['bootstrap'])
+    bootstrap.main()
+    saved = json.loads(dest.read_text())
+    assert set(saved) == set(bootstrap.ROLES)
+    for row in saved.values():
+        assert PasswordHasher().verify(users[bootstrap.uid(row['email'])].password_hash, row['password'])
+    hashes = {key: user.password_hash for key, user in users.items()}
+    bootstrap.main()
+    assert json.loads(dest.read_text()) == saved
+    assert {key: user.password_hash for key, user in users.items()} == hashes
+    db.add.assert_not_called()
+    assert users[bootstrap.uid('monitor_service@demo.greenops.local')].password_hash == 'original'
 
 
 def test_azure_adapter_private_prefix_checksum_and_scoped_enumeration():

@@ -1,4 +1,4 @@
-"""Demo-only account selection; passwords never enter the client bundle."""
+"""Demo-only accounts; credential display is explicitly requested at runtime."""
 import json
 from pathlib import Path
 from typing import Literal

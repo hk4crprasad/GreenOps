@@ -117,7 +117,7 @@ Use `hospital_admin` to explore and configure the demo; `operations_supervisor` 
 
 ## Cloud database/storage and jury login
 
-[Cloud setup and switching runbook](docs/cloud-services.md) covers Supabase runtime role provisioning, session/transaction pooling, Azure private containers and provider-aware backups. In demo mode, the login page offers seven real role accounts with one-click sign-in; sign out to switch roles. Manual credentials still work. The picker is disabled in production.
+[Cloud setup and switching runbook](docs/cloud-services.md) covers Supabase runtime role provisioning, session/transaction pooling, Azure private containers and provider-aware backups. In demo mode, the login page displays all seven real accounts with email/password, a direct **Sign in** button and **Fill credentials** for the manual form. Sign out to switch roles. Credentials are loaded dynamically from the demo-only API; production returns no demo accounts or passwords. Startup preserves the credential file. If that file is lost while the database remains, demo bootstrap regenerates only the missing account credentials without deleting users, grants or operating data.
 
 ## Enable the LLM
 

@@ -77,12 +77,34 @@
       "get": {
         "summary": "Demo Accounts",
         "operationId": "demo_accounts_api_v1_auth_demo_accounts_get",
+        "parameters": [
+          {
+            "name": "include_credentials",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Credentials"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }

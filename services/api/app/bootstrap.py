@@ -47,10 +47,11 @@ def main():
         for role in ROLES + ['monitor_service']:
             email = role+'@demo.greenops.local'
             user_id = uid(email)
-            if not db.get(User,user_id):
-                previous = saved.get(role, {})
-                if previous and (previous.get('email') != email or previous.get('user_id') != str(user_id)):
-                    raise ValueError('Demo credential identity mismatch')
+            previous = saved.get(role, {})
+            if previous and (previous.get('email') != email or previous.get('user_id') != str(user_id)):
+                raise ValueError('Demo credential identity mismatch')
+            user = db.get(User,user_id)
+            if user is None:
                 password = previous.get('password') or secrets.token_urlsafe(18)
                 db.add(User(id=user_id,email=email,name=role.replace('_',' ').title(),password_hash=PasswordHasher().hash(password),service_principal=role=='monitor_service'))
                 db.flush()
@@ -58,6 +59,12 @@ def main():
                 db.add(Grant(user_id=user_id,organization_id=org,facility_id=uid('DEMO_HOSPITAL'),zone_code='WARD_A' if role=='maintenance_technician' else None))
                 if role!='monitor_service':
                     saved[role]={'email':email,'password':password,'user_id':str(user_id)}
+            elif role!='monitor_service' and not previous.get('password'):
+                # A restored/cloud DB can outlive the local credential volume. Recover
+                # demo login without deleting identities, grants or operating history.
+                password = secrets.token_urlsafe(18)
+                user.password_hash = PasswordHasher().hash(password)
+                saved[role]={'email':email,'password':password,'user_id':str(user_id)}
         metrics = [('energy.interval_kwh','energy','kWh','interval','sum',None),('water.interval_l','water','L','interval','sum',None),
                    ('waste.generated_kg','waste','kg','interval','sum',None),('waste.stock_kg','waste','kg','state','last',None),
                    ('waste.fill_pct','waste','%','state','avg',100),('waste.age_hours','waste','h','state','last',None),

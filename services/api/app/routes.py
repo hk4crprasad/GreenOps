@@ -30,11 +30,12 @@ class DemoLoginInput(Strict):
     role:DemoRole
 
 @router.get('/auth/demo-accounts')
-def demo_accounts(response:Response):
+def demo_accounts(response:Response,include_credentials:bool=False):
     response.headers['Cache-Control']='no-store'
     if settings().app_mode!='demo':return {'enabled':False,'items':[]}
     saved=demo_credentials()
-    return {'enabled':True,'items':[{'role':role,'name':name,'description':description,'email':saved[role]['email']}
+    return {'enabled':True,'items':[{'role':role,'name':name,'description':description,'email':saved[role]['email'],
+                                   **({'password':saved[role]['password']} if include_credentials else {})}
                                    for role,(name,description) in DEMO_ROLES.items()]}
 
 @router.post('/auth/demo-login')
