@@ -1158,6 +1158,44 @@
         }
       }
     },
+    "/api/v1/forecasts/tomorrow": {
+      "get": {
+        "summary": "Tomorrow Forecasts Route",
+        "operationId": "tomorrow_forecasts_route_api_v1_forecasts_tomorrow_get",
+        "parameters": [
+          {
+            "name": "world_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "World Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/forecasts": {
       "get": {
         "summary": "Forecasts Route",

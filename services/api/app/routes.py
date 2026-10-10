@@ -192,6 +192,11 @@ def evaluation_route(model_id:str,world_id:UUID,ctx=Depends(request_db,scope="fu
     item=next((x for x in items if x['model_id']==model_id),None)
     if not item:raise HTTPException(404,'Unknown model')
     return item
+@router.get('/forecasts/tomorrow')
+def tomorrow_forecasts_route(world_id:UUID,ctx=Depends(request_db,scope="function")):
+    from app.analytics.tomorrow import tomorrow_forecast
+    return tomorrow_forecast(ctx[0],resolve_scope(ctx[0],ctx[1],world_id))
+
 @router.get('/forecasts')
 def forecasts_route(world_id:UUID,ctx=Depends(request_db,scope="function")):
     db,p=ctx;scope=resolve_scope(db,p,world_id)
