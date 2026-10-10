@@ -12,7 +12,7 @@ $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path -Parent $PSScriptRoot
 if ($FastDemo) {
     $ComposeFiles = @('compose.yaml', 'compose.demo-fast.yaml')
-    Write-Host 'Fast demo: using isolated local PostgreSQL/MinIO with seeded synthetic data. AI still uses your configured provider.'
+    Write-Host 'Fast demo: using local PostgreSQL URLs/passwords and object storage from .env. AI still uses your configured provider.'
 }
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
@@ -125,6 +125,40 @@ try {
     # The explicit context overrides inherited DOCKER_HOST/DOCKER_CONTEXT.
     # Desktop owns the connection; no custom socket or daemon is configured.
     $composeArguments = @('--context', $state.Context, 'compose') + $composeFileArguments
+    if ($FastDemo) {
+        # Compose resolves .env interpolation and process-environment precedence.
+        # Capture configuration privately: it contains credentials; never print it.
+        $configuration = Invoke-DockerProbe -Arguments ($composeArguments + @('config', '--format', 'json'))
+        if ($configuration.ExitCode -ne 0) {
+            throw 'FastDemo configuration is invalid. Set LOCAL_DATABASE_URL, LOCAL_MIGRATION_DATABASE_URL and POSTGRES_* passwords in .env, then retry.'
+        }
+        try {
+            $configurationText = $configuration.Output -join "`n"
+            $jsonStart = $configurationText.IndexOf('{')
+            if ($jsonStart -lt 0) { throw 'Missing configuration' }
+            $resolved = ConvertFrom-Json $configurationText.Substring($jsonStart)
+            $storageProvider = $resolved.services.api.environment.OBJECT_STORAGE_PROVIDER
+        }
+        catch {
+            throw 'Could not read FastDemo storage configuration. Update Docker Desktop/Compose and retry.'
+        }
+        if ($storageProvider -eq 'azure') {
+            if (-not (Test-Path -LiteralPath 'compose.azure.yaml' -PathType Leaf)) {
+                throw 'Missing compose.azure.yaml. Copy the updated Compose files and retry.'
+            }
+            $composeArguments += @('-f', 'compose.azure.yaml')
+            Write-Host 'Fast demo storage: Azure from .env; MinIO is excluded, so no quay.io pull is needed.'
+        }
+        elseif ($storageProvider -eq 's3') {
+            Write-Host 'Fast demo storage: S3/MinIO from .env (quay.io/minio/minio without a tag).'
+        }
+        else {
+            throw 'Set OBJECT_STORAGE_PROVIDER=azure or s3 in .env.'
+        }
+        $configuration = $null
+        $configurationText = $null
+        $resolved = $null
+    }
     # Explicit -f flags override COMPOSE_FILE, avoiding OS-specific separators.
     $ErrorActionPreference = 'Continue'
     $PSNativeCommandUseErrorActionPreference = $false

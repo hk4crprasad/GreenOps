@@ -1,36 +1,28 @@
-# Use after compose.yaml, without the cloud overlays. Isolated local demo volumes.
-# This preserves the existing Supabase database and Azure objects.
+# Use after compose.yaml. The database URLs and storage provider come from .env.
+# Add compose.azure.yaml when OBJECT_STORAGE_PROVIDER=azure to skip MinIO.
 x-fast-environment: &fast-environment
   APP_MODE: demo
-  DATABASE_URL: postgresql+psycopg://greenops:${RUNTIME_DB_PASSWORD:-greenops_local_demo_runtime}@postgres:5432/${POSTGRES_DB:-greenops}
+  DATABASE_URL: ${LOCAL_DATABASE_URL:?Set LOCAL_DATABASE_URL in .env for FastDemo}
   REDIS_URL: redis://redis:6379/0
-  OBJECT_STORAGE_PROVIDER: s3
-  OBJECT_STORAGE_ENDPOINT: http://minio:9000
-  OBJECT_STORAGE_BUCKET: greenops
-  OBJECT_STORAGE_ACCESS_KEY: greenops-demo-storage
-  OBJECT_STORAGE_SECRET_KEY: greenops-local-demo-storage-password
   COOKIE_SECURE: 'false'
 services:
   postgres:
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-greenops}
-      POSTGRES_USER: ${POSTGRES_USER:-greenops_admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-greenops_local_demo_admin}
-      RUNTIME_DB_PASSWORD: ${RUNTIME_DB_PASSWORD:-greenops_local_demo_runtime}
-      MIGRATOR_DB_PASSWORD: ${MIGRATOR_DB_PASSWORD:-greenops_local_demo_migrator}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      RUNTIME_DB_PASSWORD: ${RUNTIME_DB_PASSWORD:?Set RUNTIME_DB_PASSWORD in .env}
+      MIGRATOR_DB_PASSWORD: ${MIGRATOR_DB_PASSWORD:?Set MIGRATOR_DB_PASSWORD in .env}
     volumes: !override
       - demo-fast-postgres:/var/lib/postgresql
       - ./infra/bootstrap.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro,z
   minio:
-    environment:
-      MINIO_ROOT_USER: greenops-demo-storage
-      MINIO_ROOT_PASSWORD: greenops-local-demo-storage-password
     volumes: !override [demo-fast-minio:/data]
   migrate:
     environment:
       APP_MODE: demo
-      DATABASE_URL: postgresql+psycopg://greenops:${RUNTIME_DB_PASSWORD:-greenops_local_demo_runtime}@postgres:5432/${POSTGRES_DB:-greenops}
-      MIGRATION_DATABASE_URL: postgresql+psycopg://greenops_migrator:${MIGRATOR_DB_PASSWORD:-greenops_local_demo_migrator}@postgres:5432/${POSTGRES_DB:-greenops}
+      DATABASE_URL: ${LOCAL_DATABASE_URL:?Set LOCAL_DATABASE_URL in .env for FastDemo}
+      MIGRATION_DATABASE_URL: ${LOCAL_MIGRATION_DATABASE_URL:?Set LOCAL_MIGRATION_DATABASE_URL in .env for FastDemo}
     command: [sh, -c, 'alembic upgrade head && python -m app.bootstrap && python -m app.cli seed-demo && python -m app.cli generate-world --config /app/data/public/extended-demo.yaml']
     volumes: !override [demo-fast-shared:/app/shared]
   api:
