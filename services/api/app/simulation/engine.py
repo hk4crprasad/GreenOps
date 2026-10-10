@@ -8,7 +8,8 @@ class Strict(BaseModel):
     model_config=ConfigDict(extra='forbid',allow_inf_nan=False)
 class Intervention(Strict):
     kind:Literal['grid_outage','pump_failure','supply_interruption','occupancy_surge','opd_surge','heat_increase',
-                 'water_leak','excess_energy','delayed_pickup','earlier_pickup','schedule_change','asset_restoration','rainfall']
+                 'water_leak','excess_energy','delayed_pickup','earlier_pickup','schedule_change','asset_restoration','rainfall',
+                 'water_demand_increase','additional_water_supply']
     start_hour:float=Field(default=0,ge=0,le=72)
     duration_hours:float=Field(default=6,gt=0,le=72)
     amount:float=Field(default=0,ge=0,le=10000)
@@ -18,6 +19,9 @@ class Intervention(Strict):
         if self.kind in {'occupancy_surge','opd_surge','schedule_change'} and self.amount>100:
             raise ValueError('Percentage intervention exceeds 100')
         if self.kind=='heat_increase' and self.amount>15:raise ValueError('Heat increase exceeds 15 C')
+        if self.kind=='water_demand_increase' and self.amount>300:raise ValueError('Water demand increase exceeds 300 percent')
+        if self.kind=='additional_water_supply' and self.target not in {'potable','process'}:
+            raise ValueError('Additional supply must target potable or process storage; fire reserve stays protected')
         return self
 class Tank(Strict):
     name:str
@@ -91,7 +95,7 @@ def simulate_path(baseline:Baseline,scenario:Scenario,multiplier=1):
     fill=b['waste_fill_pct'];age=b['waste_age_hours'];occupancy=float(b['parking_occupancy']);queue=b['initial_queue']
     total={'unmet_essential_water_l':0.,'unmet_nonessential_water_l':0.,'unmet_essential_energy_kwh':0.,
            'unmet_nonessential_energy_kwh':0.,'grid_energy_kwh':0.,'genset_energy_kwh':0.,'battery_energy_kwh':0.,
-           'spilled_water_l':0.,'served_water_l':0.,'water_inflow_l':0.,'rejected_arrivals':0.}
+           'spilled_water_l':0.,'served_water_l':0.,'water_inflow_l':0.,'additional_water_supply_l':0.,'rejected_arrivals':0.}
     points=[];violations=[];pickup_done=False
     pickup=b['pickup_after_hours']
     for event in scenario.events:
@@ -106,6 +110,7 @@ def simulate_path(baseline:Baseline,scenario:Scenario,multiplier=1):
         pump=not any(e.kind=='pump_failure' for e in active) or 'pump' in restored
         supply=not any(e.kind=='supply_interruption' for e in active)
         activity=1+sum(e.amount/100 for e in active if e.kind in {'occupancy_surge','opd_surge'})
+        water_activity=activity*(1+sum(e.amount/100 for e in active if e.kind=='water_demand_increase'))
         heat=sum(e.amount for e in active if e.kind=='heat_increase')
         essential=b['essential_load_kw']*multiplier*activity*(1+.02*heat)
         nonessential=b['nonessential_load_kw']*multiplier*activity*(1+.04*heat)+sum(e.amount for e in active if e.kind=='excess_energy')
@@ -129,9 +134,13 @@ def simulate_path(baseline:Baseline,scenario:Scenario,multiplier=1):
         for tank in tanks:
             if tank['kind']=='fire':continue
             inflow=tank['inflow_lph']*dt if pump and supply else 0
+            kind_capacity=sum(t['capacity_l'] for t in tanks if t['kind']==tank['kind'])
+            additional=sum(e.amount for e in active if e.kind=='additional_water_supply' and e.target==tank['kind'])*dt*tank['capacity_l']/kind_capacity
+            inflow+=additional
+            total['additional_water_supply_l']+=additional
             excess=sum(e.amount for e in active if e.kind=='water_leak' and e.target==tank['kind'])*dt
-            essential_water=tank['essential_lph']*dt*multiplier*activity
-            nonessential_water=tank['nonessential_lph']*dt*multiplier*activity+excess
+            essential_water=tank['essential_lph']*dt*multiplier*water_activity
+            nonessential_water=tank['nonessential_lph']*dt*multiplier*water_activity+excess
             # Inflow first, then use demand; spill is accounted, never silently clipped.
             available_water=tank['reserve_l']+inflow
             served_e=min(essential_water,available_water);available_water-=served_e

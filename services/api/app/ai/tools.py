@@ -7,8 +7,10 @@ from sqlalchemy import select,text,func
 from fastapi import HTTPException
 from app.core.models import TABLES,Metric,now
 from app.core.records import insert,get,query,serialize,jsonable
+from app.core.settings import settings
 from app.domains.actions import ActionInput,Transition,create,transition
 from app.simulation.engine import Scenario
+from app.ai.planning import ExtraPeopleInput,OutageComparisonInput
 
 class Strict(BaseModel):model_config=ConfigDict(extra='forbid')
 class Empty(Strict):pass
@@ -43,6 +45,9 @@ TOOLS={
  'get_environment_state':(Empty,'Latest authorized indoor/outdoor state and thresholds'),
  'get_parking_and_safety':(Empty,'Parking balance, queues and denominator-aware incident rates'),
  'get_forecasts':(Empty,'Supported forecast points, empirical intervals and experimental limitations'),
+ 'get_tomorrow_forecast':(Empty,'Next local calendar-day energy, water and generated waste totals and hourly historical baseline forecast'),
+ 'estimate_extra_people':(ExtraPeopleInput,'Calculate additional visitor/inpatient/staff demand, tomorrow totals, bed headroom and recorded capacity concerns. For more members/people tomorrow, use this tool instead of mental arithmetic. Unspecified members default to visitors with explicit assumptions.'),
+ 'compare_outage_responses':(OutageComparisonInput,'Run and SAVE three scenarios with the SAME frozen baseline: no action, backup pump restoration and external water supply. Converts tomorrow local HH:MM to the engine timeline; water demand increase affects water ONLY. Returns first essential shortage intervals, inputs, units, timestamps, evidence and conditional feasibility. External supply availability and backup pump are never assumed confirmed.'),
  'get_alert_evidence':(AlertInput,'Recorded alert evidence, context and uncertainty'),
  'get_actions':(Empty,'Authorized actions, owner, state, due date and evidence'),
  'get_sustainability_summary':(Empty,'Estimated cost/carbon/intensity with versioned factors and boundary'),
@@ -54,15 +59,15 @@ TOOLS={
  'transition_action':(TransitionInput,'Transition permitted action with optimistic version, role and evidence checks')}
 
 READS=['get_facility_snapshot','get_operational_context','get_assets_and_dependencies','get_resource_reserves','get_waste_state',
-       'get_environment_state','get_parking_and_safety','get_forecasts','get_actions','get_sustainability_summary']
+       'get_environment_state','get_parking_and_safety','get_forecasts','get_tomorrow_forecast','get_actions','get_sustainability_summary']
 
 def tool_definitions(scope,mode,requested_writes=False,policy=None):
     names=set(TOOLS)
-    if scope.principal.role=='auditor':names-= {'run_what_if','draft_action_plan','create_action','transition_action'}
+    if scope.principal.role=='auditor':names-= {'run_what_if','compare_outage_responses','draft_action_plan','create_action','transition_action'}
     if mode in {'investigate','monitor'}:names.discard('transition_action')
     if not requested_writes and not (mode=='monitor' and policy and policy.get('autonomous_task_creation')):
         names-={'create_action','transition_action'}
-    if scope.principal.role=='maintenance_technician':names.discard('run_what_if')
+    if scope.principal.role=='maintenance_technician':names-= {'run_what_if','compare_outage_responses'}
     if mode=='ask':names.discard('draft_action_plan')
     return [{'type':'function','function':{'name':name,'description':TOOLS[name][1],
               'parameters':TOOLS[name][0].model_json_schema()}} for name in sorted(names)]
@@ -71,6 +76,9 @@ def read_data(db,scope,name):
     from app.domains import metrics,state
     from app.analytics.service import models
     if name=='get_facility_snapshot':return metrics.overview(db,scope)
+    if name=='get_tomorrow_forecast':
+        from app.analytics.tomorrow import tomorrow_forecast
+        return tomorrow_forecast(db,scope)
     if name=='get_operational_context':return metrics.context(db,scope)
     if name=='get_assets_and_dependencies':return state.assets_state(db,scope)
     if name=='get_resource_reserves':return state.reserves_state(db,scope)
@@ -104,7 +112,7 @@ def envelope(scope,name,data):
     evidence=[]
     def ids(value):
         if isinstance(value,dict):
-            if value.get('id') and ('data' in value or name in {'run_what_if','compare_scenarios'}):
+            if value.get('id') and ('data' in value or name in {'run_what_if','compare_scenarios','compare_outage_responses'}):
                 evidence.append({'record_id':value['id'],'url':f"/api/v1/evidence/{value['id']}?world_id={scope.world.id}"})
             for item in value.values():ids(item)
         elif isinstance(value,list):
@@ -130,6 +138,47 @@ def execute_tool(db,scope,name,arguments,run_record,allowed_names):
     if name in READS:
         data=run_data['frozen_reads'].get(name)
         if data is None:data=read_data(db,scope,name)
+    elif name=='estimate_extra_people':
+        from app.ai.planning import extra_people_plan
+        data=extra_people_plan(run_data['frozen_reads'],model)
+    elif name=='compare_outage_responses':
+        from app.ai.planning import outage_scenarios,outage_run_summary
+        from app.simulation.service import save_simulation
+        from app.simulation.engine import Baseline
+        scope.require('simulation')
+        baseline=Baseline.model_validate(run_data['frozen_baseline'])
+        scenarios,window=outage_scenarios(baseline,model,settings().facility_timezone)
+        summaries=[]
+        for index,scenario in enumerate(scenarios):
+            key='agent:'+str(run_record.id)+':outage:'+hashlib.sha256(model.model_dump_json().encode()).hexdigest()+':'+str(index)
+            saved=save_simulation(db,scope,scenario,key,baseline)
+            summaries.append(outage_run_summary(saved,window,settings().facility_timezone))
+        inputs=run_data['frozen_reads']['get_resource_reserves']
+        input_records=inputs.get('reserves',[])
+        assets=run_data['frozen_reads']['get_assets_and_dependencies']
+        pumps=[a for a in assets.get('assets',[]) if a['data'].get('kind')=='pump']
+        backup_pumps=[a for a in pumps if a['data'].get('backup') is True or a['data'].get('backup_power_independent') is True]
+        state_times=[r['state']['event_at'] for r in input_records]
+        stale=any((scope.world.as_of-datetime.fromisoformat(at)).total_seconds()>3600 for at in state_times)
+        unknowns=['External water provider, delivery capacity, lead time and water suitability are not recorded.',
+                  'Dedicated backup pump availability and its independent power source are not confirmed; restoration is a conditional modeled intervention.',
+                  'Future fuel replenishment, battery recharge, staffing and physical service continuity are not validated.']
+        if not input_records:unknowns.append('No authorized tank or backup-power state is recorded; engine defaults are assumptions, not available resources.')
+        if stale:unknowns.append('Resource readings predate the requested clock by more than one hour; obtain current readings before any operational decision.')
+        for i,summary in enumerate(summaries):
+            summary['feasibility']='recorded_resources_only_model' if i==0 else 'conditional_availability_unknown'
+        data={'source_type':'simulated_from_frozen_synthetic_data','window':window,'baseline':baseline.model_dump(mode='json'),
+              'input_records':input_records,'pump_assets':pumps,'recorded_backup_pump_candidates':backup_pumps,
+              'comparisons':summaries,'unknown_information':unknowns,'stale_resource_readings':stale,
+              'recommendation_status':'requires_operational_verification',
+              'recommendation':'Use the comparison to prioritize essential power continuity and usable water. Pump restoration still needs power; external water can reduce water shortages but cannot fix a power deficit. No physical response is confirmed feasible without current readings and verified equipment/supply.',
+              'assumptions':['Current frozen baseline is projected with constant engineering demand up to the scheduled outage; it is not tomorrow telemetry.',
+                             'Thirty-percent (or supplied) demand increase affects water only, not electricity or occupancy.',
+                             'Pump restoration starts after the supplied delay and still consumes the modeled pump power.',
+                             'External water is assumed continuously available at the explicitly shown L/h during the outage, independently of the failed pump. If not supplied, its rate equals modeled increased routine water demand.',
+                             'External supply is split across potable/process demand; fire storage remains protected.',
+                             'Shortage times are the first 15-minute intervals with unmet ESSENTIAL demand, not exact instant predictions. Nonessential shortfalls appear in full-horizon totals.',
+                             'All alternatives use the same frozen baseline and horizon; modeled results are not physical interventions or verified savings.']}
     elif name=='list_data_catalog':
         obs=TABLES['dataset_versions']
         data={'metrics':[serialize(m) for m in db.scalars(select(Metric))],

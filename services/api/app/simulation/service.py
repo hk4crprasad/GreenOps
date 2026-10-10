@@ -51,7 +51,7 @@ def save_simulation(db,scope,scenario:Scenario,key=None,baseline=None):
     scenario_row=insert(db,scope,'scenario_definitions',scenario.model_dump(),name=scenario.name)
     result=run_engine(b,scenario)
     row=insert(db,scope,'simulation_runs',{'scenario_id':str(scenario_row.id),'baseline':b.model_dump(mode='json'),
-                'scenario':scenario.model_dump(mode='json'),'result':result,'engine_version':'greenops-15min-v1'},name=scenario.name,status='completed',
+                'scenario':scenario.model_dump(mode='json'),'result':result,'engine_version':'greenops-15min-v2'},name=scenario.name,status='completed',
                 idempotency_key=key,source_type='simulated')
     for point in result['central']['points']:
         insert(db,scope,'simulation_points',point,parent_id=row.id,name=scenario.name)
