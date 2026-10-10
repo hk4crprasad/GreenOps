@@ -19,7 +19,7 @@ def capture_baseline(db,scope):
         config=scope.world.config
         typed=[Tank(name='Assumed usable potable reserve',kind='potable',capacity_l=config.get('tank_usable_l',30000),reserve_l=config.get('tank_usable_l',30000),
                     inflow_lph=0,essential_lph=config.get('essential_water_lph',3000))]
-    overview_data=overview(db,scope);s=sustainability(db,scope)
+    s=sustainability(db,scope)
     power=query(db,scope,'power_states',1)
     p=power[0].data if power else {}
     from app.domains.state import waste_state

@@ -121,7 +121,7 @@ services:
       retries: 30
   worker:
     <<: *runtime
-    command: [celery, -A, app.jobs.tasks.celery, worker, --loglevel=info, --concurrency=1]
+    command: [celery, -A, app.jobs.tasks.celery, worker, --loglevel=info, '--concurrency=${WORKER_CONCURRENCY:-2}']
   scheduler:
     <<: *runtime
     command: [celery, -A, app.jobs.tasks.celery, beat, --loglevel=info, --schedule=/tmp/celerybeat-schedule]

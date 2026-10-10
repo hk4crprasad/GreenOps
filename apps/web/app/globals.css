@@ -4,6 +4,7 @@
 .message p{white-space:normal;line-height:1.6}.message h1,.message h2,.message h3{font-size:17px;margin:16px 0 10px}.message table{width:100%;font-size:12px;border-collapse:collapse;margin:12px 0}.message td,.message th{padding:8px;text-align:left;border-bottom:1px solid var(--line)}.message th{background:#eff5f1}.message ul,.message ol{padding-left:22px}.message code{font-size:11px;overflow-wrap:anywhere}.message pre{white-space:pre-wrap}.message blockquote{border-left:2px solid #a4beb0;margin-left:0;padding-left:14px}
 
 /* Demo entrance follows the existing forest-green product identity. */
+.assistant-progress{display:flex;gap:12px;padding:16px;background:#edf5ef;border-radius:8px;margin-top:12px}.assistant-progress strong{display:block;font-size:12px}.assistant-progress small{display:block;font-size:10px;color:var(--muted);margin-top:5px}.assistant-progress-dot{height:9px;width:9px;border-radius:50%;background:#40805b;flex-shrink:0;margin-top:4px;animation:pulse 1.5s infinite}.agent-timings{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0;padding:12px;background:#f0f5ef;font-size:10px;color:var(--muted)}.agent-timings strong{display:block;font-size:15px;color:var(--ink);margin-top:4px}
 .login-workspace{width:min(100%,520px)}
 .login-workspace h2{margin:8px 0 24px}
 .login-workspace form{width:100%;gap:14px}

@@ -37,6 +37,7 @@ async def request_tracking(request:Request,call_next):
     request.state.request_id=str(uuid4());start=time.monotonic()
     response=await call_next(request)
     response.headers['X-Request-ID']=request.state.request_id
+    response.headers['Server-Timing']=f'app;dur={(time.monotonic()-start)*1000:.1f}'
     logging.getLogger('greenops').info('%s %s %s %.3fs request=%s',request.method,request.url.path,response.status_code,time.monotonic()-start,request.state.request_id)
     return response
 @app.exception_handler(HTTPException)

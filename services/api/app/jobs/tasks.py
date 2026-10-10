@@ -11,6 +11,7 @@ from app.core.records import get,serialize
 
 celery=Celery('greenops',broker=settings().redis_url)
 celery.conf.update(task_acks_late=True,task_reject_on_worker_lost=True,worker_prefetch_multiplier=1,
+   broker_connection_timeout=2,
    task_serializer='json',accept_content=['json'],broker_connection_retry_on_startup=True,
    beat_schedule={'reconcile-outbox':{'task':'greenops.dispatch','schedule':10.},'monitor-risks':{'task':'greenops.monitor','schedule':60.}},
    task_soft_time_limit=180,task_time_limit=210)

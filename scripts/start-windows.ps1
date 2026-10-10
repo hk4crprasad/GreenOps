@@ -4,11 +4,16 @@ param(
     [string[]]$ComposeFiles = @('compose.yaml', 'compose.supabase.yaml', 'compose.azure.yaml'),
     [ValidateRange(10, 1800)]
     [int]$StartupTimeoutSeconds = 180,
-    [string]$DockerDesktopPath
+    [string]$DockerDesktopPath,
+    [switch]$FastDemo
 )
 
 $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path -Parent $PSScriptRoot
+if ($FastDemo) {
+    $ComposeFiles = @('compose.yaml', 'compose.demo-fast.yaml')
+    Write-Host 'Fast demo: using isolated local PostgreSQL/MinIO with seeded synthetic data. AI still uses your configured provider.'
+}
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw 'Docker was not found. Install and start Docker Desktop with Linux containers, then try again.'

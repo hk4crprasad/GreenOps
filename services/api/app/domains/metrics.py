@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import distinct_on,aggregate_order_by
 from fastapi import HTTPException
 from app.core.models import Observation, Metric, TABLES
 from app.core.records import query, serialize
+from app.core.snapshot import snapshot_read
 
 
 def window(scope,start=None,end=None,hours=24):
@@ -36,6 +37,7 @@ def series(db,scope,metric,start=None,end=None,bucket='hour',zone_ids=None,limit
             'truncated':len(rows)>limit,'limit':limit,'offset':offset,'source_type':'synthetic',
             'limitations':['State averages are hourly sample means; no parent/submeter double counting because imported zones are disjoint reporting boundaries.']}
 
+@snapshot_read
 def totals(db,scope,start,end):
     expected=max(1,int((end-start).total_seconds()/3600))*(len(scope.zone_codes) if scope.zone_codes is not None else db.scalar(select(func.count()).select_from(TABLES['zones']).where(TABLES['zones'].world_id==scope.world.id)))
     values=db.execute(select(Observation.metric,func.sum(Observation.value),func.count(),func.count(Observation.value)).where(
@@ -44,6 +46,7 @@ def totals(db,scope,start,end):
     return {m:{'value':float(v) if v is not None else None,'rows':n,'valid_rows':valid,'expected_rows':expected,'coverage':min(1,valid/expected) if expected else None,'coverage_pct':min(100,100*valid/expected) if expected else None,'missing_intervals':max(0,expected-n),
                'unit':'kWh' if m.startswith('energy') else 'L' if m.startswith('water') else 'kg'} for m,v,n,valid in values}
 
+@snapshot_read
 def context(db,scope,start=None,end=None):
     start,end=window(scope,start,end)
     cls=TABLES['operational_snapshots']
@@ -61,6 +64,7 @@ def latest_context(db,scope):
     return [serialize(v) for v in db.scalars(select(cls).where(cls.world_id==scope.world.id,cls.event_at<=scope.world.as_of)
                  .ext(distinct_on(cls.zone_code)).order_by(cls.zone_code,cls.event_at.desc()))]
 
+@snapshot_read
 def overview(db,scope,start=None,end=None):
     start,end=window(scope,start,end)
     values=totals(db,scope,start,end)
@@ -82,6 +86,7 @@ def overview(db,scope,start=None,end=None):
             'coverage':{m:v['coverage'] for m,v in values.items()},'boundary':'Sum of disjoint zone intervals; imported aggregate waste is separate from the extended-world batch ledger',
             'limitations':['Synthetic demonstration; no clinical workflows or validated real-hospital accuracy']}
 
+@snapshot_read
 def sustainability(db,scope,start=None,end=None):
     start,end=window(scope,start,end)
     usage=totals(db,scope,start,end)

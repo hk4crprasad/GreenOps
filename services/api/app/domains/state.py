@@ -1,9 +1,12 @@
 from datetime import timedelta
 from sqlalchemy import select,func
+from sqlalchemy.dialects.postgresql import distinct_on
+from app.core.snapshot import snapshot_read
 from app.core.models import TABLES
 from app.core.records import query,serialize
 from app.simulation.engine import waste_deadline
 
+@snapshot_read
 def waste_state(db,scope):
     batches=TABLES['waste_batches'];moves=TABLES['waste_movements']
     category=batches.data['category'].as_string()
@@ -35,33 +38,41 @@ def waste_state(db,scope):
             'policy':serialize(policy) if policy else None,'source_type':'synthetic_extended_v1' if bins else 'unavailable',
             'limitations':['Additional category ledger exists only in the independent extended world. Pickup metadata does not prove real physical handover.','Batch stock derives from signed movements at virtual cutoff, not current stored status.']}
 
+@snapshot_read
 def assets_state(db,scope):
     assets=query(db,scope,'assets',100);cls=TABLES['asset_telemetry']
-    telemetry=[]
-    for a in assets:
-        latest=db.scalar(select(cls).where(cls.world_id==scope.world.id,cls.parent_id==a.id,cls.event_at<=scope.world.as_of).order_by(cls.event_at.desc(),cls.created_at.desc(),cls.id).limit(1))
-        if latest:telemetry.append(serialize(latest))
+    latest={r.parent_id:r for r in db.scalars(select(cls).where(cls.world_id==scope.world.id,
+        cls.parent_id.in_([a.id for a in assets]),cls.event_at<=scope.world.as_of)
+        .ext(distinct_on(cls.parent_id)).order_by(cls.parent_id,cls.event_at.desc(),cls.created_at.desc(),cls.id))}
+    telemetry=[serialize(latest[a.id]) for a in assets if a.id in latest]
     return {'assets':[serialize(a) for a in assets],'dependencies':[serialize(a) for a in query(db,scope,'asset_dependencies')],
             'telemetry':telemetry,'maintenance_orders':[serialize(a) for a in query(db,scope,'maintenance_orders')],
             'limitations':['Telemetry fault candidates use rules until adequate labels/validation exist.']}
 
+@snapshot_read
 def reserves_state(db,scope):
     states=[]
     for table,parent in [('tank_states','tanks'),('power_states','power_sources')]:
         cls=TABLES[table]
-        for item in query(db,scope,parent,30):
-            latest=db.scalar(select(cls).where(cls.world_id==scope.world.id,cls.parent_id==item.id,cls.event_at<=scope.world.as_of).order_by(cls.event_at.desc(),cls.created_at.desc(),cls.id).limit(1))
-            if latest:states.append({'configuration':serialize(item),'state':serialize(latest)})
+        parents=query(db,scope,parent,30)
+        latest={r.parent_id:r for r in db.scalars(select(cls).where(cls.world_id==scope.world.id,
+            cls.parent_id.in_([p.id for p in parents]),cls.event_at<=scope.world.as_of)
+            .ext(distinct_on(cls.parent_id)).order_by(cls.parent_id,cls.event_at.desc(),cls.created_at.desc(),cls.id))}
+        states.extend({'configuration':serialize(item),'state':serialize(latest[item.id])}
+                      for item in parents if item.id in latest)
     return {'reserves':states,'assumptions':scope.world.config,'limitations':['Potable, process and protected fire reserves are separate. No water quality certification inferred.']}
 
+@snapshot_read
 def environment_state(db,scope):
     cls=TABLES['environment_readings'];zones=query(db,scope,'zones',50);readings=[]
-    for z in zones:
-        latest=db.scalar(select(cls).where(cls.world_id==scope.world.id,cls.zone_code==z.zone_code,cls.event_at<=scope.world.as_of).order_by(cls.event_at.desc(),cls.created_at.desc(),cls.id).limit(1))
-        if latest:readings.append(serialize(latest))
+    latest={r.zone_code:r for r in db.scalars(select(cls).where(cls.world_id==scope.world.id,
+        cls.zone_code.in_([z.zone_code for z in zones]),cls.event_at<=scope.world.as_of)
+        .ext(distinct_on(cls.zone_code)).order_by(cls.zone_code,cls.event_at.desc(),cls.created_at.desc(),cls.id))}
+    readings=[serialize(latest[z.zone_code]) for z in zones if z.zone_code in latest]
     policies=[serialize(p) for p in query(db,scope,'policy_versions',100) if p.category=='environment']
     return {'readings':readings,'policies':policies,'window':'Latest hourly state per zone','limitations':['Internal demonstration thresholds; not clinical exposure standards.']}
 
+@snapshot_read
 def parking_safety(db,scope):
     snapshots=query(db,scope,'parking_snapshots',1)
     cls=TABLES['safety_incidents'];start=scope.world.as_of-timedelta(days=30)

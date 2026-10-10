@@ -68,6 +68,33 @@ def me(ctx=Depends(request_db,scope="function")):
             'llm':{'enabled':settings().llm_enabled,'configured':bool(settings().openai_api_key and settings().openai_chat_model),
                    'tools':settings().llm_supports_tools,'monitor_writes':settings().agent_autonomous_writes_enabled}}
 
+@router.get('/workspace')
+def workspace(ctx=Depends(request_db,scope="function")):
+    db,p=ctx
+    return {'user':me(ctx),'worlds':worlds(ctx)['items'],
+            'organizations':organizations(ctx)['items'],'facilities':facilities(ctx)['items'],
+            'demo_enabled':settings().app_mode=='demo'}
+
+from app.domains.notifications import DrillInput, DrillTransition
+
+@router.get('/notifications')
+def notifications(world_id:UUID,ctx=Depends(request_db,scope="function")):
+    from app.domains.notifications import feed
+    db,p=ctx
+    return feed(db,resolve_scope(db,p,world_id))
+
+@router.post('/demo/alerts',status_code=201)
+def demo_alert(body:DrillInput,world_id:UUID,request:Request,ctx=Depends(request_db,scope="function")):
+    from app.domains.notifications import create_drill
+    db,p=ctx
+    return create_drill(db,resolve_scope(db,p,world_id),body,request.headers.get('Idempotency-Key'))
+
+@router.post('/demo/alerts/{record_id}/transition')
+def demo_alert_transition(record_id:UUID,body:DrillTransition,world_id:UUID,ctx=Depends(request_db,scope="function")):
+    from app.domains.notifications import transition_drill
+    db,p=ctx
+    return transition_drill(db,resolve_scope(db,p,world_id),record_id,body)
+
 @router.get('/organizations')
 def organizations(ctx=Depends(request_db,scope="function")):
     return {'items':[serialize(v) for v in ctx[0].scalars(select(Organization))]}
@@ -356,9 +383,11 @@ def run_events(record_id:UUID,world_id:UUID,request:Request,after:int=0,ctx=Depe
         started=time.monotonic()
         while time.monotonic()-started<settings().agent_max_run_seconds+30:
             if await request.is_disconnected():return
-            with transaction(p.user_id,p.organization_id) as session:
-                scope,run=owned_run(session,p,world_id,record_id)
-                events=list(run.data.get('events',[]));status=run.status
+            def read_progress():
+                with transaction(p.user_id,p.organization_id) as session:
+                    scope,run=owned_run(session,p,world_id,record_id)
+                    return list(run.data.get('events',[])),run.status
+            events,status=await asyncio.to_thread(read_progress)
             for event in events:
                 if event['id']>last:
                     last=event['id'];yield f"id: {last}\nevent: {event['event']}\ndata: {json.dumps(event['data'])}\n\n"

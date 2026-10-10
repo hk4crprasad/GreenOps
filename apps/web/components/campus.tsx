@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import {useSearchParams} from 'next/navigation';
 import {ArrowUpRight,ArrowsOutSimple,ArrowsInSimple,ArrowCounterClockwise,Lightning,Drop,Trash,Plus,Minus,MapPin,CheckCircle,Warning,Leaf,Thermometer} from '@phosphor-icons/react';
 import {api,scoped,number,time,type Row,type World} from '../lib/api';
 import {allPages,buildingFor,coverage,projected,resources,usage,mapLayers,layerColor,temperature,type MapLayer,type CampusData,type Point,type Resource,type Series} from '../lib/campus';
@@ -22,12 +23,15 @@ function Trend({points,color}:{points:Point[];color:string}){
 }
 
 export default function Campus({world,hours,start,end,refresh}:{world:World;hours:string;start:string;end:string;refresh:number}){
+  const searchParams=useSearchParams();
+  const focusZone=searchParams.get('zone')||'',focusLayer=searchParams.get('layer')||'';
   const [data,setData]=useState<CampusData|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[retry,setRetry]=useState(0);
   const [layer,setLayer]=useState<MapLayer>('energy'),[overlay,setOverlay]=useState(true),[selected,setSelected]=useState(''),[proposed,setProposed]=useState(false);
   const [targets,setTargets]=useState({energy:12,water:18,waste:10}),[present,setPresent]=useState(false),[reset,setReset]=useState(0),[zoom,setZoom]=useState(0);
   const isHeat=layer==='heat',resource:Resource=isHeat?'energy':layer as Resource;
   const setResource=(key:Resource)=>setLayer(key);
   const root=useRef<HTMLElement>(null),presentButton=useRef<HTMLButtonElement>(null);
+  useEffect(()=>{if(focusZone)setSelected(focusZone);if(focusLayer in mapLayers)setLayer(focusLayer as MapLayer)},[focusZone,focusLayer]);
   useEffect(()=>{
     const abort=new AbortController();setLoading(true);setData(null);setError('');
     const finish=end&&start?new Date(end+'Z').toISOString():world.as_of;

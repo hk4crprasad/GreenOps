@@ -1,0 +1,52 @@
+# Use after compose.yaml, without the cloud overlays. Isolated local demo volumes.
+# This preserves the existing Supabase database and Azure objects.
+x-fast-environment: &fast-environment
+  APP_MODE: demo
+  DATABASE_URL: postgresql+psycopg://greenops:${RUNTIME_DB_PASSWORD:-greenops_local_demo_runtime}@postgres:5432/${POSTGRES_DB:-greenops}
+  REDIS_URL: redis://redis:6379/0
+  OBJECT_STORAGE_PROVIDER: s3
+  OBJECT_STORAGE_ENDPOINT: http://minio:9000
+  OBJECT_STORAGE_BUCKET: greenops
+  OBJECT_STORAGE_ACCESS_KEY: greenops-demo-storage
+  OBJECT_STORAGE_SECRET_KEY: greenops-local-demo-storage-password
+  COOKIE_SECURE: 'false'
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-greenops}
+      POSTGRES_USER: ${POSTGRES_USER:-greenops_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-greenops_local_demo_admin}
+      RUNTIME_DB_PASSWORD: ${RUNTIME_DB_PASSWORD:-greenops_local_demo_runtime}
+      MIGRATOR_DB_PASSWORD: ${MIGRATOR_DB_PASSWORD:-greenops_local_demo_migrator}
+    volumes: !override
+      - demo-fast-postgres:/var/lib/postgresql
+      - ./infra/bootstrap.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro,z
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    build: !reset null
+    environment:
+      MINIO_ROOT_USER: greenops-demo-storage
+      MINIO_ROOT_PASSWORD: greenops-local-demo-storage-password
+    volumes: !override [demo-fast-minio:/data]
+  migrate:
+    environment:
+      APP_MODE: demo
+      DATABASE_URL: postgresql+psycopg://greenops:${RUNTIME_DB_PASSWORD:-greenops_local_demo_runtime}@postgres:5432/${POSTGRES_DB:-greenops}
+      MIGRATION_DATABASE_URL: postgresql+psycopg://greenops_migrator:${MIGRATOR_DB_PASSWORD:-greenops_local_demo_migrator}@postgres:5432/${POSTGRES_DB:-greenops}
+    command: [sh, -c, 'alembic upgrade head && python -m app.bootstrap && python -m app.cli seed-demo && python -m app.cli generate-world --config /app/data/public/extended-demo.yaml']
+    volumes: !override [demo-fast-shared:/app/shared]
+  api:
+    environment: *fast-environment
+    volumes: !override [demo-fast-shared:/app/shared]
+  worker:
+    environment: *fast-environment
+    volumes: !override [demo-fast-shared:/app/shared]
+  scheduler:
+    environment: *fast-environment
+    volumes: !override [demo-fast-shared:/app/shared]
+  web:
+    volumes: !override [demo-fast-shared:/app/shared:ro]
+volumes:
+  demo-fast-postgres:
+  demo-fast-minio:
+  demo-fast-shared:
