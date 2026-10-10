@@ -47,3 +47,7 @@ The API production image passed the original 47 backend tests, including scoped 
 The default MinIO image is exactly `quay.io/minio/minio`, with no tag or source-build fallback. This environment denied that registry pull. Local database/API/UI verification used an explicit temporary test override with existing private Azure storage, so MinIO startup itself remains unverified here.
 
 The Windows FastDemo launcher now resolves the configured storage provider before startup. With Azure selected in `.env`, it adds the Azure overlay automatically, so the denied MinIO image is not pulled. Local PostgreSQL URL/password selection and Azure exclusion were checked against resolved Compose configuration; mocked Windows startup also covered both Azure and S3 selections.
+
+FastDemo now validates the two local URLs against the PostgreSQL settings and synchronizes the local runtime/migrator role passwords before migration, preserving tables and volumes. This role setup was executed on the existing isolated local PostgreSQL volume; both roles authenticated over TCP afterward. Windows startup mocks passed with this synchronization step. Migration failures now print their traceback automatically.
+
+The API build also verifies all 16 starter files and restores Windows CRLF text only when the original manifest hash matches the restored LF bytes. Git attributes preserve exact public bundle bytes. A focused check verified original files and simulated Windows CRLF conversion, and rejected modified text/model content; checksum verification remains enforced.

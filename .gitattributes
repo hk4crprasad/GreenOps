@@ -1,0 +1,6 @@
+
+# Linux container init scripts must keep LF on Windows checkouts.
+*.sh text eol=lf
+
+# Preserve exact source/artifact bytes covered by the public checksum manifest.
+data/public/** -text

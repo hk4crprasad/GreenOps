@@ -9,6 +9,7 @@ COPY services/api/alembic ./alembic
 COPY services/api/alembic.ini ./
 COPY services/api/tests ./tests
 COPY data/public ./data/public
-RUN useradd -u 10001 -m app
+COPY scripts/verify_runtime_bundle.py /tmp/verify-runtime-bundle.py
+RUN python /tmp/verify-runtime-bundle.py /app/data/public/starter && useradd -u 10001 -m app
 USER app
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

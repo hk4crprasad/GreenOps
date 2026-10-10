@@ -26,7 +26,7 @@ def verify_bundle(root):
     for f in manifest['files']:
         path = (root/f['path']).resolve()
         if not path.is_relative_to(root.resolve()) or hashlib.sha256(path.read_bytes()).hexdigest()!=f['sha256']:
-            raise ValueError('Public bundle checksum mismatch')
+            raise ValueError(f"Public bundle checksum mismatch: {f['path']}. Restore the original verified file and rebuild the API image.")
     for file in root.rglob('*'):
         if 'private_label' in file.name:
             raise ValueError('Private truth in public bundle')
