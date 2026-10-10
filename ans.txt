@@ -37,3 +37,17 @@ We have integrated six experimental energy/water forecast models, anomaly detect
 Recorded verification includes 41 passing backend tests, seven distinct browser workflows passing across recorded runs, and 20/20 page views passing. The database contains 51,840 synthetic source rows and 362,880 normalized observations. Backup/restore and recovery after a Redis outage were tested.
 
 Forecasts remain experimental and simulation impacts are modeled. Broader estate-specific dashboard adaptation, physical sensor integration and priority worker notification routing are the next planned additions.
+
+Team contributions
+
+Haraprasad Hota (Captain): Built the AI/ML models and backend APIs, and contributed to project research.
+
+Ashutosh Panigrahi: Built the frontend dashboard and user interface.
+
+Subhendu Samal: Co-developed the frontend dashboard and user interface.
+
+Master Brajadulal: Contributed to project research.
+
+Raman Behera: Designed the UI/UX and prepared the PPT and presentation.
+
+Abinash Mohanty: Contributed to project research.

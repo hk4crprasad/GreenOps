@@ -68,6 +68,8 @@ All operating data is synthetic. AI reads permission-scoped evidence; action wri
 
 [Detailed technology stack, separate user scopes and permission matrix](docs/techstack-and-scopes.md)
 
+[Interactive 3D hospital campus — jury walkthrough, resource overlays, and improvement estimates](docs/campus-map.md). Open **3D campus map** in Workspace navigation or visit `/campus` after sign-in.
+
 <details><summary>Complete technology stack</summary>
 
 [![Technology stack](docs/diagrams/technology-stack.png)](docs/diagrams/technology-stack.svg)
