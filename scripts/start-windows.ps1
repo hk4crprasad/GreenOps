@@ -138,9 +138,24 @@ try {
             if ($jsonStart -lt 0) { throw 'Missing configuration' }
             $resolved = ConvertFrom-Json $configurationText.Substring($jsonStart)
             $storageProvider = $resolved.services.api.environment.OBJECT_STORAGE_PROVIDER
+            $localRuntime = [Uri]$resolved.services.api.environment.DATABASE_URL
+            $localMigration = [Uri]$resolved.services.migrate.environment.MIGRATION_DATABASE_URL
+            $postgresEnvironment = $resolved.services.postgres.environment
         }
         catch {
             throw 'Could not read FastDemo storage configuration. Update Docker Desktop/Compose and retry.'
+        }
+        $runtimeIdentity = $localRuntime.UserInfo -split ':', 2
+        $migrationIdentity = $localMigration.UserInfo -split ':', 2
+        if ($localRuntime.Host -ne 'postgres' -or $localMigration.Host -ne 'postgres' -or
+            $localRuntime.Port -ne 5432 -or $localMigration.Port -ne 5432 -or
+            $runtimeIdentity[0] -ne 'greenops' -or $migrationIdentity[0] -ne 'greenops_migrator' -or
+            $localRuntime.AbsolutePath -ne ('/' + $postgresEnvironment.POSTGRES_DB) -or
+            $localMigration.AbsolutePath -ne ('/' + $postgresEnvironment.POSTGRES_DB) -or
+            $runtimeIdentity.Count -ne 2 -or $migrationIdentity.Count -ne 2 -or
+            [Uri]::UnescapeDataString($runtimeIdentity[1]) -cne $postgresEnvironment.RUNTIME_DB_PASSWORD -or
+            [Uri]::UnescapeDataString($migrationIdentity[1]) -cne $postgresEnvironment.MIGRATOR_DB_PASSWORD) {
+            throw 'FastDemo LOCAL_* URLs must target postgres:5432 and POSTGRES_DB, with greenops/RUNTIME_DB_PASSWORD and greenops_migrator/MIGRATOR_DB_PASSWORD from .env.'
         }
         if ($storageProvider -eq 'azure') {
             if (-not (Test-Path -LiteralPath 'compose.azure.yaml' -PathType Leaf)) {
@@ -158,6 +173,27 @@ try {
         $configuration = $null
         $configurationText = $null
         $resolved = $null
+        $postgresEnvironment = $null
+        $runtimeIdentity = $null
+        $migrationIdentity = $null
+        $localRuntime = $null
+        $localMigration = $null
+
+        Write-Host 'Starting local PostgreSQL and synchronizing its application-role passwords with .env...'
+        $postgresStartup = Invoke-DockerProbe -Arguments ($composeArguments + @('up', '-d', '--wait', '--wait-timeout', '120', 'postgres'))
+        if ($postgresStartup.ExitCode -ne 0) {
+            $postgresStartup.Output | ForEach-Object { Write-Host $_ }
+            throw 'Local PostgreSQL did not become ready. Inspect the postgres container logs.'
+        }
+        # Execute inside this local Postgres container using its bootstrap identity.
+        # Existing roles are updated; operating tables and volumes are preserved.
+        # Strip CR using an octal escape, including on Windows CRLF checkouts.
+        $roleSetup = Invoke-DockerProbe -Arguments ($composeArguments + @('exec', '-T', 'postgres', 'sh', '-c', 'test -r /docker-entrypoint-initdb.d/01-roles.sh && tr -d \\015 < /docker-entrypoint-initdb.d/01-roles.sh | sh'))
+        if ($roleSetup.ExitCode -ne 0) {
+            $roleSetup.Output | ForEach-Object { Write-Host $_ }
+            throw 'Local database-role setup failed. Check POSTGRES_USER and the postgres container logs; no data was deleted.'
+        }
+        Write-Host 'Local database roles are ready. Starting migration and seeded demo services...'
     }
     # Explicit -f flags override COMPOSE_FILE, avoiding OS-specific separators.
     $ErrorActionPreference = 'Continue'
