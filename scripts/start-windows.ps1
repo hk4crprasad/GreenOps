@@ -166,7 +166,11 @@ try {
     $composeExitCode = $LASTEXITCODE
     $ErrorActionPreference = 'Stop'
     if ($composeExitCode -ne 0) {
-        throw "Docker Compose startup failed (exit $composeExitCode). See the Docker output above."
+        Write-Host 'Migration diagnostics (the traceback below contains the actual cause):'
+        $ErrorActionPreference = 'Continue'
+        & docker @composeArguments logs --no-color --tail 80 migrate
+        $ErrorActionPreference = 'Stop'
+        throw "Docker Compose startup failed (exit $composeExitCode). See the migration traceback above."
     }
     Write-Host 'GreenOps startup requested. Open http://localhost:3000 once the services are ready.'
     Write-Host '3D hospital campus: http://localhost:3000/campus'
