@@ -9,11 +9,18 @@ type Props={markers:Marker[];selected:string;onSelect:(code:string)=>void;color:
 
 export default function CampusScene({markers,selected,onSelect,color,reset,zoom}:Props){
   const host=useRef<HTMLDivElement>(null),labels=useRef(new Map<string,HTMLButtonElement>());
-  const current=useRef({markers,selected,onSelect,color});
-  current.current={markers,selected,onSelect,color};
+  const [rotating,setRotating]=useState(true);
+  const current=useRef({markers,selected,onSelect,color,rotating});
+  current.current={markers,selected,onSelect,color,rotating};
   const controller=useRef<{reset:()=>void;zoom:(value:number)=>void}> (null);
   const [failed,setFailed]=useState(false);
   const codes=markers.map(m=>m.code).join('|');
+  useEffect(()=>{
+    const preference=window.matchMedia('(prefers-reduced-motion: reduce)');
+    const change=()=>setRotating(!preference.matches);
+    change();preference.addEventListener('change',change);
+    return()=>preference.removeEventListener('change',change);
+  },[]);
   useEffect(()=>{
     if(!host.current)return;
     const el=host.current;
@@ -32,6 +39,14 @@ export default function CampusScene({markers,selected,onSelect,color,reset,zoom}
     const camera=new THREE.PerspectiveCamera(38,1,.1,500);
     const controls=new OrbitControls(camera,renderer.domElement);
     controls.enableDamping=true;controls.enablePan=false;
+    controls.autoRotateSpeed=.25; // One gentle revolution every four minutes.
+    let interacting=false,pauseUntil=0;
+    const pause=()=>{pauseUntil=performance.now()+5000;};
+    const interactionStart=()=>{interacting=true;pause();};
+    const interactionEnd=()=>{interacting=false;pause();};
+    controls.addEventListener('start',interactionStart);controls.addEventListener('end',interactionEnd);
+    // Hold labels still while pointing, touching, or using keyboard controls.
+    el.addEventListener('pointermove',pause);el.addEventListener('pointerdown',pause);el.addEventListener('focusin',pause);
     controls.minDistance=75;controls.maxDistance=280;
     controls.minPolarAngle=.15;controls.maxPolarAngle=Math.PI/2.4;
     let redraw=true;
@@ -127,9 +142,11 @@ export default function CampusScene({markers,selected,onSelect,color,reset,zoom}
     let previousWidth=el.clientWidth;
     const resize=()=>{const w=el.clientWidth,h=el.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if((w<500)!==(previousWidth<500))home();previousWidth=w;redraw=true;};
     const observer=new ResizeObserver(resize);observer.observe(el);resize();
-    let frame=0;const v=new THREE.Vector3();let previousProps:typeof current.current|null=null;
+    let frame=0,lastFrame=performance.now();const v=new THREE.Vector3();let previousProps:typeof current.current|null=null;
     function render(){
-      const moved=controls.update();
+      const now=performance.now(),delta=Math.min((now-lastFrame)/1000,.1);lastFrame=now;
+      controls.autoRotate=current.current.rotating&&!interacting&&now>=pauseUntil&&!document.hidden;
+      const moved=controls.update(delta);
       // Keep orbit damping responsive without redrawing a static campus every frame.
       if(!redraw&&!moved&&previousProps===current.current){frame=requestAnimationFrame(render);return;}
       redraw=false;previousProps=current.current;
@@ -144,7 +161,10 @@ export default function CampusScene({markers,selected,onSelect,color,reset,zoom}
       renderer.render(scene,camera);frame=requestAnimationFrame(render);
     }render();
     return()=>{
-      cancelAnimationFrame(frame);observer.disconnect();controls.dispose();controller.current=null;
+      cancelAnimationFrame(frame);observer.disconnect();
+      controls.removeEventListener('start',interactionStart);controls.removeEventListener('end',interactionEnd);
+      el.removeEventListener('pointermove',pause);el.removeEventListener('pointerdown',pause);el.removeEventListener('focusin',pause);
+      controls.dispose();controller.current=null;
       renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('webglcontextlost',lost);
       const geometries=new Set<THREE.BufferGeometry>(),mats=new Set<THREE.Material>();
       scene.traverse(obj=>{if(obj instanceof THREE.Mesh){geometries.add(obj.geometry);for(const material of Array.isArray(obj.material)?obj.material:[obj.material])mats.add(material);}});
@@ -154,6 +174,7 @@ export default function CampusScene({markers,selected,onSelect,color,reset,zoom}
   useEffect(()=>{controller.current?.reset();},[reset]);
   useEffect(()=>{if(zoom)controller.current?.zoom(zoom>0?1:-1);},[zoom]);
   return <div className="campus-scene" ref={host}>
+    {!failed&&<button className="campus-rotation" aria-label={rotating?'Pause auto rotation':'Resume auto rotation'} aria-pressed={rotating} onClick={()=>setRotating(value=>!value)}>{rotating?'Ⅱ Pause rotation':'↻ Resume rotation'}</button>}
     {!failed&&markers.map(m=><button key={m.code} ref={el=>{if(el)labels.current.set(m.code,el);else labels.current.delete(m.code);}} className={'campus-marker '+(selected===m.code?'is-selected':'')} aria-label={`Inspect ${m.label}`} aria-pressed={selected===m.code} onClick={()=>onSelect(m.code)}><span>{m.alert&&<i/>}{m.label}</span><strong>{m.value}</strong></button>)}
     {failed&&<div className="campus-fallback"><strong>3D rendering is unavailable in this browser.</strong><p>Select a building below to explore all resource data and improvements.</p>{markers.map(m=><button key={m.code} onClick={()=>onSelect(m.code)}>{m.label} · {m.value}</button>)}</div>}
   </div>;

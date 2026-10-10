@@ -5,7 +5,7 @@ Open **3D campus map** in the Workspace navigation, or `/campus`. The page uses 
 ## Jury walkthrough
 
 1. Choose `extended_v1` to display all six reporting zones, then select **Present to jury**.
-2. Drag the 3D campus to rotate it; use the zoom buttons or mouse wheel. **Reset campus view** restores the starting view.
+2. The campus slowly rotates automatically (one revolution every four minutes). Pointing or interacting pauses rotation for five seconds; use **Pause rotation** to hold the view or **Resume rotation** to restart it. Reduced-motion preferences disable automatic rotation initially. Drag the 3D campus to rotate it; use the zoom buttons or mouse wheel. **Reset campus view** restores the starting view.
 3. Select **Energy**, **Water**, or **Waste**. Click a building label, the building itself, or its directory entry to inspect usage, interval coverage, and the observed trend.
 4. Adjust the **Reduction assumption** to demonstrate an illustrative before/after comparison. **Observed** returns the map labels to the recorded totals.
 5. Review **What we’re fixing**, including persisted action statuses and open alerts for the selected zone. Open the Action centre for the existing action workflow or the What-if studio for saved engineering simulations.

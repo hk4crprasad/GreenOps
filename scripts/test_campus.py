@@ -72,6 +72,7 @@ def main():
         page.goto(args.url + '/campus')
         expect(page.locator('.campus-directory button')).to_have_count(6)
         expect(page.locator('.campus-scene canvas')).to_be_visible()
+        page.get_by_role('button', name='Pause auto rotation', exact=True).click()
         expect(page.locator('.campus-total').nth(0)).to_contain_text('350')
         expect(page.locator('.campus-inspector-metric')).to_contain_text('150 kWh')
         expect(page.locator('.campus-inspector-metric')).to_contain_text('8% interval coverage')
