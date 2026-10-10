@@ -24,7 +24,7 @@ export default function VisitorImpact({world,refresh}:{world:World;refresh:numbe
   {label:'Electricity consumption',unit:'kWh',metric:'energy.interval_kwh',extra:extra.energy},
   {label:'Waste generated',unit:'kg',metric:'waste.generated_kg',extra:extra.waste},
   {label:'Fresh-air planning allowance',unit:'m³',metric:null,extra:extra.air},
-  {label:'Electricity emissions',unit:'kg CO₂e',metric:null,extra:carbon},
+  {label:'Electricity emissions',unit:'kg CO₂e',metric:'energy.interval_kwh',extra:carbon},
  ];
  function current(row:typeof rows[number]):number|null{
   if(!baseline)return null;
@@ -39,7 +39,7 @@ export default function VisitorImpact({world,refresh}:{world:World;refresh:numbe
   const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='greenops-extra-visitors.json';link.click();URL.revokeObjectURL(url);
  }
  return <section className="panel visitor-impact" aria-labelledby="visitor-impact-title">
-  <div className="panel-head"><div><p className="eyebrow">Quick what-if • tomorrow</p><h2 id="visitor-impact-title">What if 1,000 more people arrive?</h2></div><span className="badge">Instant planning estimate</span></div>
+  <div className="panel-head"><div><p className="eyebrow">Quick what-if • tomorrow</p><h2 id="visitor-impact-title">What if more people arrive tomorrow?</h2></div><span className="badge">Instant planning estimate</span></div>
   <p className="muted">Adjust the extra visitors to see additional demand and tomorrow’s estimated totals. Results update immediately.</p>
   <div className="visitor-controls"><label>Extra visitors tomorrow<input type="number" min={0} max={100000} step={100} value={people} onChange={e=>setPeople(Number(e.target.value))}/></label><label>Average stay (hours)<input type="number" min={.25} max={24} step={.25} value={stay} onChange={e=>setStay(Number(e.target.value))}/></label><label>Arrivals spread over (hours)<input type="number" min={1} max={24} value={arrivals} onChange={e=>setArrivals(Number(e.target.value))}/></label></div>
   {!valid&&<p className="notice error" role="alert">Enter 0–100,000 whole visitors, a stay and arrival window above 0 and at most 24 hours, nonnegative allowances, and loss percentages from 0 to 100.</p>}
@@ -48,7 +48,7 @@ export default function VisitorImpact({world,refresh}:{world:World;refresh:numbe
    const base=current(row),added=valid?row.extra:null,coverage=row.metric?baseline?.metrics[row.metric]?.coverage_pct:null;
    return <tr key={row.label}><td className="record-title">{row.label}<small className="muted visitor-unit">{row.unit}</small></td><td>{base===null?'Unavailable':number(base)}{coverage!=null&&<small className="muted visitor-unit">{number(coverage)}% coverage</small>}</td><td className="visitor-addition">{added===null?'Unavailable':`+${number(added,2)}`}</td><td>{base===null||added===null?'Unavailable':number(base+added,2)}{coverage!=null&&coverage<100&&<small className="visitor-unit">Partial baseline</small>}</td></tr>
   })}</tbody></table></div>
-  <div className="visitor-losses"><div><span className="tiny muted">Estimated extra water wasted</span><strong>{valid&&waterLoss!==''?`${number(extra.water*Number(waterLoss)/100,2)} L`:'Set a loss % below'}</strong></div><div><span className="tiny muted">Estimated avoidable energy</span><strong>{valid&&energyLoss!==''?`${number(extra.energy*Number(energyLoss)/100,2)} kWh`:'Set a loss % below'}</strong></div><div><span className="tiny muted">Average extra people on site</span><strong>{valid?number(concurrent):'Unavailable'}</strong></div></div>
+  <div className="visitor-losses"><div><span className="tiny muted">Estimated extra water wasted</span><strong>{valid&&waterLoss!==''?`${number(extra.water*Number(waterLoss)/100,2)} L`:'Set a loss % below'}</strong></div><div><span className="tiny muted">Estimated avoidable energy</span><strong>{valid&&energyLoss!==''?`${number(extra.energy*Number(energyLoss)/100,2)} kWh`:'Set a loss % below'}</strong></div><div><span className="tiny muted">Average extra people on site</span><strong>{valid?number(concurrent):'Unavailable'}</strong><small className="muted visitor-unit">Assumes uniform arrivals</small></div></div>
   <details><summary className="details-link">Adjust allowances and wastage assumptions</summary><p className="tiny muted">Water, electricity and waste defaults match the per-OPD-visit coefficients in our synthetic demo generator (2.5 L, 0.15 kWh, 0.025 kg). Applying them to visitors is an illustrative assumption. The fresh-air allowance is editable and has not been validated for this hospital.</p><div className="form-grid">
    <label>Water (L per visitor)<input type="number" min={0} step={.5} value={water} onChange={e=>setWater(Number(e.target.value))}/></label>
    <label>Electricity (kWh per visitor)<input type="number" min={0} step={.01} value={energy} onChange={e=>setEnergy(Number(e.target.value))}/></label>
