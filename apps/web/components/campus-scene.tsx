@@ -4,14 +4,14 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {buildingFor,campusBuildings,type Building} from '../lib/campus';
 
-type Marker={code:string;label:string;value:string;intensity:number;alert:boolean};
-type Props={markers:Marker[];selected:string;onSelect:(code:string)=>void;color:string;reset:number;zoom:number};
+type Marker={code:string;label:string;value:string;intensity:number|null;color:string;alert:boolean};
+type Props={markers:Marker[];selected:string;onSelect:(code:string)=>void;overlay:boolean;reset:number;zoom:number};
 
-export default function CampusScene({markers,selected,onSelect,color,reset,zoom}:Props){
+export default function CampusScene({markers,selected,onSelect,overlay,reset,zoom}:Props){
   const host=useRef<HTMLDivElement>(null),labels=useRef(new Map<string,HTMLButtonElement>());
   const [rotating,setRotating]=useState(true);
-  const current=useRef({markers,selected,onSelect,color,rotating});
-  current.current={markers,selected,onSelect,color,rotating};
+  const current=useRef({markers,selected,onSelect,overlay,rotating});
+  current.current={markers,selected,onSelect,overlay,rotating};
   const controller=useRef<{reset:()=>void;zoom:(value:number)=>void}> (null);
   const [failed,setFailed]=useState(false);
   const codes=markers.map(m=>m.code).join('|');
@@ -81,6 +81,13 @@ export default function CampusScene({markers,selected,onSelect,color,reset,zoom}
     textPlane('MAIN ENTRANCE  ↑',-8,.2,29,10,1.7,'#8d9991','#ffffff');
     const clickable:THREE.Object3D[]=[];
     const halos=new Map<string,THREE.Mesh>();
+    const surfaces=new Map<string,{material:THREE.MeshStandardMaterial;original:THREE.Color}[]>();
+    const roofs=new Map<string,THREE.Mesh>();
+    const glowCanvas=document.createElement('canvas');glowCanvas.width=128;glowCanvas.height=128;
+    const glowContext=glowCanvas.getContext('2d')!,gradient=glowContext.createRadialGradient(64,64,0,64,64,64);
+    gradient.addColorStop(0,'rgba(255,255,255,0.85)');gradient.addColorStop(.45,'rgba(255,255,255,0.65)');gradient.addColorStop(1,'rgba(255,255,255,0)');
+    glowContext.fillStyle=gradient;glowContext.fillRect(0,0,128,128);
+    const glowTexture=new THREE.CanvasTexture(glowCanvas);
     const anchors=new Map<string,THREE.Vector3>();
     const selectedRing=new THREE.Mesh(new THREE.RingGeometry(1,1.035,64),new THREE.MeshBasicMaterial({color:'#194f3b',side:THREE.DoubleSide}));selectedRing.rotation.x=-Math.PI/2;selectedRing.position.y=.24;scene.add(selectedRing);
     const extra=current.current.markers.filter(m=>!campusBuildings.some(b=>b.code===m.code)).map((m,i)=>buildingFor(m.code,i));
@@ -103,8 +110,13 @@ export default function CampusScene({markers,selected,onSelect,color,reset,zoom}
       box(x,2.2,z+d/2+1.5,5,.4,3.2,'#f4f0df',group);box(x,1,z+d/2+.25,2,2,.22,'#244f60',group);
       if(b.code==='ICU'){box(x,h+1.1,z,3,.12,.8,'#bd5b50',group);box(x,h+1.12,z,.8,.12,3,'#bd5b50',group);}
       if(authorized){
-        group.traverse(m=>{m.userData.code=b.code;if(m instanceof THREE.Mesh)clickable.push(m);});
-        const halo=new THREE.Mesh(new THREE.PlaneGeometry(w+3,d+3),new THREE.MeshBasicMaterial({color:current.current.color,transparent:true,opacity:.35,depthWrite:false}));halo.rotation.x=-Math.PI/2;halo.position.set(x,.3,z);scene.add(halo);halos.set(b.code,halo);
+        const tinted:{material:THREE.MeshStandardMaterial;original:THREE.Color}[]=[];
+        group.traverse(m=>{m.userData.code=b.code;if(m instanceof THREE.Mesh){
+          clickable.push(m);
+          if(m.scale.y>h*.6){const material=(m.material as THREE.MeshStandardMaterial).clone();m.material=material;tinted.push({material,original:material.color.clone()});}
+        }});surfaces.set(b.code,tinted);
+        const halo=new THREE.Mesh(new THREE.PlaneGeometry(w*2.5,d*2.5),new THREE.MeshBasicMaterial({map:glowTexture,transparent:true,opacity:.8,depthWrite:false}));halo.rotation.x=-Math.PI/2;halo.position.set(x,.34,z);scene.add(halo);halos.set(b.code,halo);
+        const roof=new THREE.Mesh(new THREE.PlaneGeometry(w-.6,d-.6),new THREE.MeshBasicMaterial({transparent:true,opacity:.82,depthWrite:false}));roof.rotation.x=-Math.PI/2;roof.position.set(x,h+.96,z);scene.add(roof);roofs.set(b.code,roof);
         anchors.set(b.code,new THREE.Vector3(x,h+4,z));
       }
     }
@@ -150,11 +162,13 @@ export default function CampusScene({markers,selected,onSelect,color,reset,zoom}
       // Keep orbit damping responsive without redrawing a static campus every frame.
       if(!redraw&&!moved&&previousProps===current.current){frame=requestAnimationFrame(render);return;}
       redraw=false;previousProps=current.current;
-      const {markers,selected,color}=current.current;
+      const {markers,selected,overlay}=current.current;
       const b=[...campusBuildings,...extra].find(b=>b.code===selected);selectedRing.visible=!!b;
       if(b){selectedRing.position.set(b.x,.32,b.z);selectedRing.scale.set(Math.max(b.w,b.d)*.8,Math.max(b.w,b.d)*.8,1);}
       markers.forEach(m=>{
-        const halo=halos.get(m.code);if(halo){const material=halo.material as THREE.MeshBasicMaterial;material.color.set(color);material.opacity=.12+m.intensity*.43;}
+        const halo=halos.get(m.code);if(halo){halo.visible=overlay&&m.intensity!==null;const material=halo.material as THREE.MeshBasicMaterial;material.color.set(m.color);material.opacity=.6+(m.intensity??0)*.35;}
+        const roof=roofs.get(m.code);if(roof){roof.visible=overlay;(roof.material as THREE.MeshBasicMaterial).color.set(m.color);}
+        surfaces.get(m.code)?.forEach(({material,original})=>{material.color.copy(original);material.emissive.set('#000000');if(overlay){material.color.lerp(new THREE.Color(m.color),.78);material.emissive.set(m.color).multiplyScalar(.12);}});
         const label=labels.current.get(m.code),anchor=anchors.get(m.code);
         if(label&&anchor){v.copy(anchor).project(camera);label.style.transform=`translate(-50%,-100%) translate(${(v.x*.5+.5)*el.clientWidth}px,${(-v.y*.5+.5)*el.clientHeight}px)`;label.style.visibility=v.z<1?'visible':'hidden';label.style.zIndex=m.code===selected?'3':'2';}
       });
@@ -175,7 +189,7 @@ export default function CampusScene({markers,selected,onSelect,color,reset,zoom}
   useEffect(()=>{if(zoom)controller.current?.zoom(zoom>0?1:-1);},[zoom]);
   return <div className="campus-scene" ref={host}>
     {!failed&&<button className="campus-rotation" aria-label={rotating?'Pause auto rotation':'Resume auto rotation'} aria-pressed={rotating} onClick={()=>setRotating(value=>!value)}>{rotating?'Ⅱ Pause rotation':'↻ Resume rotation'}</button>}
-    {!failed&&markers.map(m=><button key={m.code} ref={el=>{if(el)labels.current.set(m.code,el);else labels.current.delete(m.code);}} className={'campus-marker '+(selected===m.code?'is-selected':'')} aria-label={`Inspect ${m.label}`} aria-pressed={selected===m.code} onClick={()=>onSelect(m.code)}><span>{m.alert&&<i/>}{m.label}</span><strong>{m.value}</strong></button>)}
+    {!failed&&markers.map(m=><button key={m.code} ref={el=>{if(el)labels.current.set(m.code,el);else labels.current.delete(m.code);}} style={{borderTop:`3px solid ${m.color}`}} data-overlay-color={m.color} data-intensity={m.intensity??'unknown'} className={'campus-marker '+(selected===m.code?'is-selected':'')} aria-label={`Inspect ${m.label}`} aria-pressed={selected===m.code} onClick={()=>onSelect(m.code)}><span>{m.alert&&<i/>}{m.label}</span><strong>{m.value}</strong></button>)}
     {failed&&<div className="campus-fallback"><strong>3D rendering is unavailable in this browser.</strong><p>Select a building below to explore all resource data and improvements.</p>{markers.map(m=><button key={m.code} onClick={()=>onSelect(m.code)}>{m.label} · {m.value}</button>)}</div>}
   </div>;
 }
