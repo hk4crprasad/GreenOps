@@ -49,6 +49,16 @@ Once Docker Desktop's Linux engine is running, the direct command is:
 docker --context desktop-linux compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml up -d --build
 ```
 
+For the fastest jury demonstration, use the local database mode:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-windows.ps1 -FastDemo
+```
+
+This selects `compose.yaml` plus `compose.demo-fast.yaml`, starts isolated local PostgreSQL/MinIO volumes, and seeds the checksummed starter data and independent extended synthetic world. It does not edit cloud credentials or copy production records. The first run downloads/builds images and seeds data; start it before the presentation. AI still uses the configured remote provider. Default startup returns to the Supabase/Azure setup. Local demo actions and cloud actions are separate.
+
+Use the bell beside your profile to inspect recorded risks and upcoming work. Administrators and operations supervisors can launch water, energy or waste presentation drills, locate them on the 3D map, acknowledge them and simulate containment. Each drill displays the actual scoped 24-hour synthetic reading total and coverage. Read status is local to the browser session; containment is explicitly simulated. [Jury walkthrough and performance evidence](docs/jury-demo.md).
+
 Open **http://localhost:3000** or **http://localhost:3000/campus**. Inspect status and logs with:
 
 ```powershell
@@ -115,7 +125,7 @@ All operating data is synthetic. AI reads permission-scoped evidence; action wri
 
 This workspace is initialized. Use the two commands above to start it; generated login credentials are in `.local/demo-credentials.json`. The commands below initialize a fresh installation.
 
-Requires podman with Compose v2 (supporting `!reset`/`!override`), network access for the initial image/dependency build, approximately 12 GB free disk and 8 GB RAM. The initial MinIO build compiles its pinned official source release; browser dependencies are included in the web image.
+Requires podman with Compose v2 (supporting `!reset`/`!override`), network access for the initial image/dependency build, approximately 12 GB free disk and 8 GB RAM. MinIO uses quay.io/minio/minio directly without a tag. Browser dependencies are included in the web image.
 
 ```bash
 cp .env.example .env

@@ -158,6 +158,11 @@ def series_route(world_id:UUID,metric:str,start:datetime|None=None,end:datetime|
     from app.domains.metrics import series
     return series(ctx[0],resolve_scope(ctx[0],ctx[1],world_id),metric,start,end,bucket,[z for z in zone_ids.split(',') if z],limit,offset)
 
+@router.get('/metrics/summary')
+def resource_summary_route(world_id:UUID,start:datetime|None=None,end:datetime|None=None,ctx=Depends(request_db,scope="function")):
+    from app.domains.metrics import resource_summary
+    return resource_summary(ctx[0],resolve_scope(ctx[0],ctx[1],world_id),start,end)
+
 @router.get('/metrics/comparison')
 def comparison_route(world_id:UUID,metric:str,hours:int=24,ctx=Depends(request_db,scope="function")):
     from app.domains.metrics import series
@@ -345,14 +350,14 @@ def conversation_message(record_id:UUID,world_id:UUID,body:MessageInput,request:
     from app.ai.orchestrator import start_run
     db,p=ctx;scope=resolve_scope(db,p,world_id)
     key=request.headers.get('Idempotency-Key')
-    return start_run(db,scope,record_id,body.content,body.mode,key=f'user:{p.user_id}:{key}' if key else None)
+    return start_run(db,scope,record_id,body.content,body.mode,key=f'user:{p.user_id}:{key}' if key else None,defer_snapshot=True)
 @router.post('/agent-runs',status_code=202)
 def agent_create(world_id:UUID,body:MessageInput,ctx=Depends(request_db,scope="function")):
     from app.ai.orchestrator import start_run
     from app.core.records import insert
     db,p=ctx;scope=resolve_scope(db,p,world_id)
     convo=insert(db,scope,'conversations',{},name=body.content[:150],owner_id=p.user_id,zone_code=scope.zone_codes[0] if scope.zone_codes else None)
-    return start_run(db,scope,convo.id,body.content,body.mode)
+    return start_run(db,scope,convo.id,body.content,body.mode,defer_snapshot=True)
 
 def owned_run(db,p,world_id,record_id):
     scope=resolve_scope(db,p,world_id);run=get(db,scope,'agent_runs',record_id)
@@ -385,8 +390,13 @@ def run_events(record_id:UUID,world_id:UUID,request:Request,after:int=0,ctx=Depe
             if await request.is_disconnected():return
             def read_progress():
                 with transaction(p.user_id,p.organization_id) as session:
-                    scope,run=owned_run(session,p,world_id,record_id)
-                    return list(run.data.get('events',[])),run.status
+                    resolve_scope(session,p,world_id)
+                    cls=TABLES['agent_runs']
+                    row=session.execute(select(cls.owner_id,cls.status,cls.data['events']).where(
+                        cls.id==record_id,cls.world_id==world_id)).first()
+                    if not row:raise HTTPException(404,'Run unavailable in your scope')
+                    if row[0]!=p.user_id and p.role not in ADMIN:raise HTTPException(403,'Run owner required')
+                    return list(row[2] or []),row[1]
             events,status=await asyncio.to_thread(read_progress)
             for event in events:
                 if event['id']>last:

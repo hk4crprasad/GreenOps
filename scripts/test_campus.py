@@ -32,7 +32,14 @@ def main():
         q = parse_qs(parsed.query)
         requests.append((path, q))
         result = {'items': [], 'truncated': False}
-        if path == '/me':
+        if path == '/workspace':
+            result = {'user':dict(id='user', name='Campus reviewer', role='auditor', organization_id='org', llm={}),
+                      'worlds':[world, {**world, 'id': 'scoped-test', 'code': 'restricted_v1'}],
+                      'organizations':[{'id':'org','name':'GreenOps'}],
+                      'facilities':[{'id':'facility','name':'GreenOps Hospital'}], 'demo_enabled':True}
+        elif path == '/notifications':
+            result = {'alerts':[], 'actions':[], 'open_count':0, 'truncated':False, 'zones':[], 'demo_enabled':True, 'as_of':world['as_of']}
+        elif path == '/me':
             result = dict(id='user', name='Campus reviewer', role='auditor', organization_id='org', llm={})
         elif path == '/worlds':
             result = {'items': [world, {**world, 'id': 'scoped-test', 'code': 'restricted_v1'}]}

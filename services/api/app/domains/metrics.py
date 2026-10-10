@@ -64,6 +64,17 @@ def latest_context(db,scope):
     return [serialize(v) for v in db.scalars(select(cls).where(cls.world_id==scope.world.id,cls.event_at<=scope.world.as_of)
                  .ext(distinct_on(cls.zone_code)).order_by(cls.zone_code,cls.event_at.desc()))]
 
+def resource_summary(db,scope,start=None,end=None):
+    start,end=window(scope,start,end)
+    latest=latest_context(db,scope)
+    return {'world_id':str(scope.world.id),'as_of':scope.world.as_of.isoformat(),
+            'start':start.isoformat(),'end':end.isoformat(),'source_type':'synthetic',
+            'metrics':totals(db,scope,start,end),
+            'bed_capacity':sum(r['data']['bed_capacity'] for r in latest) if latest else None,
+            'occupied_beds':sum(r['data']['occupied_beds'] for r in latest) if latest else None,
+            'stale_zone_codes':[r['zone_code'] for r in latest if (scope.world.as_of-datetime.fromisoformat(r['event_at'])).total_seconds()>3600],
+            'boundary':'Sum of disjoint reporting zone intervals'}
+
 @snapshot_read
 def overview(db,scope,start=None,end=None):
     start,end=window(scope,start,end)

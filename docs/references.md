@@ -11,6 +11,6 @@ Checked 8 October 2026. The local build contract remains the specification; refe
 - [Chat Completions reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create): `max_completion_tokens`, streaming and parallel tool-call request fields. The configured Azure endpoint passed real capability checks; no `temperature` or `max_tokens` is sent.
 - [Celery tasks](https://docs.celeryq.dev/en/stable/userguide/tasks.html): late acknowledgements require idempotent effects.
 - [Next.js installation](https://nextjs.org/docs/app/getting-started/installation): App Router and current package compatibility.
-- [MinIO source repository](https://github.com/minio/minio): source-only distribution. Registry pulls for official MinIO tags failed; the repository uses a pinned Go source build of RELEASE.2025-04-22T22-12-26Z.
+- [MinIO source repository](https://github.com/minio/minio): local object storage uses quay.io/minio/minio directly without a tag.
 
 Sources inform engineering and scope. Waste age 24 h, environmental thresholds, tariff INR 8/kWh and carbon factor 0.7 kgCO2e/kWh are explicitly labeled internal synthetic demo assumptions, not quoted official current requirements.

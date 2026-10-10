@@ -87,7 +87,7 @@ services:
       retries: 20
     mem_limit: 256m
   minio:
-    build: {context: ., dockerfile: infra/minio.Dockerfile}
+    image: quay.io/minio/minio
     command: [server, /data, --console-address, ':9001']
     environment:
       MINIO_ROOT_USER: ${OBJECT_STORAGE_ACCESS_KEY}

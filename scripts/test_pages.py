@@ -78,7 +78,7 @@ def main():
                 return
             # The login screen deliberately probes the current anonymous session.
             anonymous_auth_probe = (urlparse(message.location.get('url', '')).path in
-                                    {'/api/v1/me', '/api/v1/worlds', '/api/v1/organizations', '/api/v1/facilities'}
+                                    {'/api/v1/workspace','/api/v1/me', '/api/v1/worlds', '/api/v1/organizations', '/api/v1/facilities'}
                                     and '401' in message.text)
             if not anonymous_auth_probe:
                 errors.append('console: ' + message.text)
@@ -112,7 +112,7 @@ def main():
                     assert not [r for r in responses if r['status'] >= 400], 'Domain API request failed'
                     # Exercise the global refresh and await actual scoped reads.
                     refresh_path = {
-                        'overview': '/overview', 'energy': '/overview', 'water': '/reserves',
+                        'overview': '/overview', 'energy': '/metrics/summary', 'water': '/reserves',
                         'waste': '/waste/state', 'environment': '/environment/state',
                         'assets': '/assets/state', 'parking': '/parking/state',
                         'safety': '/safety/state', 'sustainability': '/sustainability',

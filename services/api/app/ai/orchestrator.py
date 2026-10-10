@@ -42,7 +42,18 @@ def event(db,scope,run,kind,payload):
     events.append({'id':len(events)+1,'event':kind,'data':jsonable(payload),'at':now().isoformat()})
     run.data={**run.data,'events':events}
 
-def start_run(db,scope,conversation_id,message,mode='ask',trigger_id=None,policy=None,key=None,enqueue_job=True):
+def capture_snapshot(db,scope):
+    from app.simulation.service import capture_baseline
+    began=time.monotonic()
+    with snapshot_reads(db):
+        frozen={name:read_data(db,scope,name) for name in READS}
+        baseline=capture_baseline(db,scope).model_dump(mode='json')
+        documents=[serialize(r) for r in query(db,scope,'document_chunks',100)]
+    return {'frozen_reads':frozen,'frozen_baseline':baseline,'frozen_documents':documents,
+            'snapshot_capture_ms':round((time.monotonic()-began)*1000),
+            'snapshot_status':'ready','snapshot_captured_at':now().isoformat()}
+
+def start_run(db,scope,conversation_id,message,mode='ask',trigger_id=None,policy=None,key=None,enqueue_job=True,defer_snapshot=False):
     if mode not in {'ask','investigate','monitor'}:raise HTTPException(422,'Invalid agent mode')
     if mode in {'investigate','monitor'} and scope.principal.role=='auditor':raise HTTPException(403,'Auditor has ask/read mode only')
     convo=get(db,scope,'conversations',conversation_id)
@@ -51,17 +62,12 @@ def start_run(db,scope,conversation_id,message,mode='ask',trigger_id=None,policy
         old=db.scalar(select(TABLES['agent_runs']).where(TABLES['agent_runs'].world_id==scope.world.id,TABLES['agent_runs'].idempotency_key==key))
         if old:return serialize(old)
     requested=mode=='ask' and bool(re.search(r'\b(create|assign|update|transition|acknowledge|resolve|verify|close|reopen)\b',message,re.I) and re.search(r'\b(task|action|work order)\b',message,re.I))
-    from app.simulation.service import capture_baseline
-    capture_started=time.monotonic()
-    with snapshot_reads(db):
-        frozen={name:read_data(db,scope,name) for name in READS}
-        baseline=capture_baseline(db,scope).model_dump(mode='json')
+    captured={'snapshot_status':'pending'} if defer_snapshot else capture_snapshot(db,scope)
     run=insert(db,scope,'agent_runs',{'mode':mode,'message':message,'conversation_id':str(conversation_id),'as_of':scope.world.as_of.isoformat(),
-             'snapshot_version':scope.world.version,'snapshot_zone_codes':scope.zone_codes,'world_config':scope.world.config,'frozen_reads':frozen,
-             'frozen_baseline':baseline,'snapshot_capture_ms':round((time.monotonic()-capture_started)*1000),
-             'frozen_documents':[serialize(r) for r in query(db,scope,'document_chunks',100)],'requested_writes':requested,
+             'snapshot_version':scope.world.version,'snapshot_zone_codes':scope.zone_codes,'world_config':scope.world.config,**captured,'requested_writes':requested,
              'policy':policy,'trigger_id':trigger_id,'events':[],'usage':[],'provider_verified':False},
              name=message[:150],status='queued',owner_id=scope.principal.user_id,idempotency_key=key,zone_code=scope.zone_codes[0] if scope.zone_codes else None)
+    event(db,scope,run,'run_queued',{'snapshot_status':run.data['snapshot_status']})
     insert(db,scope,'messages',{'role':'user','content':message,'mode':mode},parent_id=convo.id,name='User message',owner_id=scope.principal.user_id,zone_code=run.zone_code)
     from app.jobs.service import enqueue
     if enqueue_job:enqueue(db,scope,'agent',{'run_id':str(run.id)},key or str(run.id))
@@ -119,6 +125,24 @@ async def run(principal,world_id,run_id,provider=None):
             record.status='running';event(db,scope,record,'run_started',{'run_id':str(record.id),'mode':record.data['mode'],'as_of':record.data['as_of'],'snapshot_version':record.data['snapshot_version']})
             record.data={**record.data,'queue_wait_ms':max(0,round((now()-record.created_at).total_seconds()*1000)),
                          'timings':[]}
+            needs_snapshot=record.data.get('snapshot_status')=='pending'
+            if needs_snapshot:event(db,scope,record,'snapshot_started',{'as_of':record.data['as_of']})
+            run_data=dict(record.data)
+        if needs_snapshot:
+            # Queue acceptance is lightweight. Freeze authorized evidence at the
+            # requested virtual clock before the first provider call.
+            with transaction(principal.user_id,principal.organization_id) as db:
+                scope=resolve_scope(db,principal,world_id)
+                if scope.zone_codes!=run_data['snapshot_zone_codes']:
+                    raise ValueError('Grants changed before evidence capture; start a fresh authorized investigation')
+                captured=jsonable(capture_snapshot(db,pinned_scope(scope,run_data)))
+                record=get(db,scope,'agent_runs',run_id,True)
+                if record.status=='cancelled':return {'run_id':str(run_id),'status':'cancelled'}
+                record.data={**record.data,**captured}
+                event(db,scope,record,'snapshot_completed',{'snapshot_capture_ms':captured['snapshot_capture_ms']})
+        with transaction(principal.user_id,principal.organization_id) as db:
+            scope=resolve_scope(db,principal,world_id);record=get(db,scope,'agent_runs',run_id)
+            if record.status=='cancelled':return {'run_id':str(run_id),'status':'cancelled'}
             messages=[{'role':'system','content':SYSTEM+'\nMode: '+record.data['mode']+'\nVirtual as_of: '+record.data['as_of']+' UTC. Facility display is Asia/Kolkata (UTC+05:30). Convert times explicitly; yesterday uses the virtual clock.\nSnapshot: '+json.dumps(record.data['frozen_reads']['get_facility_snapshot'],default=str)}]
             if not s.llm_supports_tools:messages[0]['content']+='\nTEXT-ONLY CONTEXT MODE; agent tools unavailable.\n'+json.dumps(record.data['frozen_reads'],default=str)
             conversation=get(db,scope,'conversations',record.data['conversation_id'])

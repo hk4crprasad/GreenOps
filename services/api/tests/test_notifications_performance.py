@@ -24,6 +24,8 @@ def test_drill_lifecycle_is_scoped_audited_and_does_not_change_consumption():
         key=str(uuid4())
         row=create_drill(db,scope,DrillInput(kind='water',zone_code='WARD_A'),key)
         assert row['source_type']=='synthetic_demo_drill' and row['data']['demo_drill']
+        assert row['data']['recorded_context']['value'] is not None
+        assert row['data']['recorded_context']['source_type']=='synthetic_observations'
         assert create_drill(db,scope,DrillInput(kind='water',zone_code='WARD_A'),key)['id']==row['id']
         assert row['id'] in {r['id'] for r in feed(db,scope)['alerts']}
         with pytest.raises(HTTPException) as exc:
@@ -89,3 +91,44 @@ def test_jobs_publish_only_after_outer_commit_and_rollback_discards(monkeypatch)
                 db.info['greenops_dispatch_jobs']=['rolled-back']
                 raise ValueError('rollback')
         assert sent==['committed'] and 'greenops_dispatch_jobs' not in db.info
+
+
+def test_resource_summary_matches_full_overview_without_unrelated_domain_reads():
+    from app.domains.metrics import resource_summary, overview
+    p=demo_principal()
+    with transaction(p.user_id,p.organization_id) as db:
+        w=db.scalar(select(World).where(World.code=='extended_v1'));scope=resolve_scope(db,p,w.id)
+        brief=resource_summary(db,scope);full=overview(db,scope)
+        for key in ['metrics','occupied_beds','bed_capacity','start','end','stale_zone_codes']:
+            assert brief[key]==full[key]
+        assert 'reserves' not in brief and 'critical_assets' not in brief
+
+
+@pytest.mark.asyncio
+async def test_deferred_run_accepts_before_snapshot_and_publishes_capture_progress(monkeypatch):
+    from app.ai import orchestrator
+    from app.core.records import insert,get
+    from test_ai import FixtureProvider
+    p=demo_principal();actual=orchestrator.capture_snapshot;captures=[]
+    def capture(db,scope):
+        with transaction(p.user_id,p.organization_id) as monitor:
+            record=get(monitor,resolve_scope(monitor,p,world_id),'agent_runs',run_id)
+            assert record.status=='running'
+            assert record.data['events'][-1]['event']=='snapshot_started'
+        captures.append(scope.world.as_of)
+        return actual(db,scope)
+    monkeypatch.setattr(orchestrator,'capture_snapshot',capture)
+    with transaction(p.user_id,p.organization_id) as db:
+        w=db.scalar(select(World).where(World.code=='extended_v1'));scope=resolve_scope(db,p,w.id)
+        c=insert(db,scope,'conversations',{},name='Deferred evidence fixture',owner_id=p.user_id)
+        accepted=orchestrator.start_run(db,scope,c.id,'Explain the authorized operating context',enqueue_job=False,defer_snapshot=True)
+        world_id=w.id;run_id=accepted['id'];as_of=w.as_of
+        assert not captures and 'frozen_reads' not in accepted['data']
+        assert accepted['data']['snapshot_status']=='pending'
+    result=await orchestrator.run(p,world_id,run_id,FixtureProvider([{'role':'assistant','content':'The supplied operations context is synthetic. Review evidence before deciding on a response.'}]))
+    assert result['status']=='completed' and captures==[as_of]
+    with transaction(p.user_id,p.organization_id) as db:
+        record=get(db,resolve_scope(db,p,world_id),'agent_runs',run_id)
+        assert record.data['snapshot_status']=='ready'
+        kinds=[e['event'] for e in record.data['events']]
+        assert kinds.index('snapshot_completed')<kinds.index('provider_started')

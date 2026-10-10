@@ -27,7 +27,7 @@ export default function CampusScene({markers,selected,onSelect,overlay,reset,zoo
     let renderer:THREE.WebGLRenderer;
     try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});}catch{setFailed(true);return;}
     setFailed(false);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
     renderer.shadowMap.enabled=true;
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -154,8 +154,11 @@ export default function CampusScene({markers,selected,onSelect,overlay,reset,zoo
     let previousWidth=el.clientWidth;
     const resize=()=>{const w=el.clientWidth,h=el.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if((w<500)!==(previousWidth<500))home();previousWidth=w;redraw=true;};
     const observer=new ResizeObserver(resize);observer.observe(el);resize();
-    let frame=0,lastFrame=performance.now();const v=new THREE.Vector3();let previousProps:typeof current.current|null=null;
+    let frame=0,lastFrame=performance.now(),lastPaint=0;const v=new THREE.Vector3();let previousProps:typeof current.current|null=null;
     function render(){
+      const tick=performance.now();
+      if(document.hidden||(!interacting&&!redraw&&tick-lastPaint<1000/30)){frame=requestAnimationFrame(render);return;}
+      lastPaint=tick;
       const now=performance.now(),delta=Math.min((now-lastFrame)/1000,.1);lastFrame=now;
       controls.autoRotate=current.current.rotating&&!interacting&&now>=pauseUntil&&!document.hidden;
       const moved=controls.update(delta);
