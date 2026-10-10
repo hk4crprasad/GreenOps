@@ -33,26 +33,30 @@ To inspect startup status or logs:
 
 ## Windows PowerShell — start everything
 
-Start Docker Desktop with Linux containers, then run this from the project folder for the initialized Supabase/Azure configuration:
-
-```powershell
-docker compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml up -d --build
-```
-
-Or use the Windows launcher, which finds the project folder automatically:
+With Docker Desktop installed, run the Windows launcher from the project folder for the initialized Supabase/Azure configuration:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-windows.ps1
 ```
 
-The launcher builds and starts the web app, API, worker, scheduler, Redis, and required migrations. It uses the existing `.env` and passes each Compose file explicitly. Windows uses `;` for `COMPOSE_FILE` by default, while this project's shared examples use `:`; explicit `-f` arguments avoid that mismatch without editing credentials. The execution-policy option applies only to this PowerShell process.
+The launcher starts Docker Desktop if needed, waits up to three minutes for its Linux engine, then builds and starts the web app, API, worker, scheduler, Redis, and required migrations. It selects the Docker Desktop context explicitly, overriding inherited `DOCKER_HOST`/`DOCKER_CONTEXT` settings. It uses the existing `.env` and passes each Compose file explicitly. Windows uses `;` for `COMPOSE_FILE` by default, while this project's shared examples use `:`; explicit `-f` arguments avoid that mismatch without editing credentials. The execution-policy option applies only to this PowerShell process.
+
+For slower machines, append `-StartupTimeoutSeconds 300`. A custom Docker Desktop installation can be supplied with `-DockerDesktopPath "D:\Docker\Docker Desktop.exe"`. If an older Desktop version is running Windows containers, the launcher asks you to select **Switch to Linux containers** from its tray menu; recent versions switch automatically. If Docker Desktop reports a WSL or virtualization error, resolve it in Desktop before rerunning. Docker Desktop manages its own Windows named-pipe connection; no custom socket or TCP listener is needed.
+
+Once Docker Desktop's Linux engine is running, the direct command is:
+
+```powershell
+docker --context desktop-linux compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml up -d --build
+```
 
 Open **http://localhost:3000** or **http://localhost:3000/campus**. Inspect status and logs with:
 
 ```powershell
-docker compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml ps
-docker compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml logs --tail=50
+docker --context desktop-linux compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml ps
+docker --context desktop-linux compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml logs --tail=50
 ```
+
+If the launcher reports the `default` context on an older Desktop version, substitute `--context default` in the direct commands above.
 
 For the fully local PostgreSQL/MinIO setup, configure `.env` for local services and run `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-windows.ps1 -ComposeFiles compose.yaml`.
 

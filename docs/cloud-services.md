@@ -38,7 +38,7 @@ Downloads still authenticate through GreenOps and check database scope and SHA25
 
 MinIO and local PostgreSQL are omitted by the overlays. Redis remains local for Celery. To return to local services, restore the local DB URLs, set `OBJECT_STORAGE_PROVIDER=s3` and `COMPOSE_FILE=compose.yaml`. Local and remote database contents are independent.
 
-On Windows, use `docker compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml up -d --build`, or run `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-windows.ps1`. Explicit file flags override the shared colon-separated `COMPOSE_FILE`, which otherwise fails under Windows' default semicolon separator. [Docker Compose separator documentation](https://docs.docker.com/compose/how-tos/environment-variables/envvars/#compose_file).
+On Windows, run `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-windows.ps1`. The launcher starts Docker Desktop, waits for its Linux engine, and uses its context explicitly before running Compose. Once the engine is ready, the direct command is `docker --context desktop-linux compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml up -d --build` (use `--context default` if the launcher reports that context on an older Desktop version). Explicit file flags override the shared colon-separated `COMPOSE_FILE`, which otherwise fails under Windows' default semicolon separator. [Docker Compose separator documentation](https://docs.docker.com/compose/how-tos/environment-variables/envvars/#compose_file).
 
 ## Demo sign-in
 
