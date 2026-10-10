@@ -38,6 +38,8 @@ Downloads still authenticate through GreenOps and check database scope and SHA25
 
 MinIO and local PostgreSQL are omitted by the overlays. Redis remains local for Celery. To return to local services, restore the local DB URLs, set `OBJECT_STORAGE_PROVIDER=s3` and `COMPOSE_FILE=compose.yaml`. Local and remote database contents are independent.
 
+On Windows, use `docker compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml up -d --build`, or run `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-windows.ps1`. Explicit file flags override the shared colon-separated `COMPOSE_FILE`, which otherwise fails under Windows' default semicolon separator. [Docker Compose separator documentation](https://docs.docker.com/compose/how-tos/environment-variables/envvars/#compose_file).
+
 ## Demo sign-in
 
 In `APP_MODE=demo`, the entrance shows seven real accounts with their email/password, direct sign-in and a Fill credentials option. Direct sign-in verifies the actual Argon2 password hash and creates regular session/CSRF cookies. The frontend explicitly requests credential display from the demo-only API; the default account list excludes passwords, responses are not cached, and no passwords are hardcoded in the frontend bundle. Sign out to switch perspectives. If the shared credential file is missing or incomplete but users already exist, bootstrap regenerates only missing demo passwords and preserves users, grants and all operating records.

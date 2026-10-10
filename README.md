@@ -31,6 +31,31 @@ To inspect startup status or logs:
 ./scripts/compose.sh logs --tail=50 api worker scheduler web
 ```
 
+## Windows PowerShell — start everything
+
+Start Docker Desktop with Linux containers, then run this from the project folder for the initialized Supabase/Azure configuration:
+
+```powershell
+docker compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml up -d --build
+```
+
+Or use the Windows launcher, which finds the project folder automatically:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-windows.ps1
+```
+
+The launcher builds and starts the web app, API, worker, scheduler, Redis, and required migrations. It uses the existing `.env` and passes each Compose file explicitly. Windows uses `;` for `COMPOSE_FILE` by default, while this project's shared examples use `:`; explicit `-f` arguments avoid that mismatch without editing credentials. The execution-policy option applies only to this PowerShell process.
+
+Open **http://localhost:3000** or **http://localhost:3000/campus**. Inspect status and logs with:
+
+```powershell
+docker compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml ps
+docker compose -f compose.yaml -f compose.supabase.yaml -f compose.azure.yaml logs --tail=50
+```
+
+For the fully local PostgreSQL/MinIO setup, configure `.env` for local services and run `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-windows.ps1 -ComposeFiles compose.yaml`.
+
 ## How the system works
 
 ```mermaid
